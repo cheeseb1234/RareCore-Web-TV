@@ -1,0 +1,2390 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TV Home (Single-File)</title>
+  <style>
+    :root{
+      --bg: #0b0f17;
+      --glass: rgba(10,14,22,.55);
+      --glass2: rgba(10,14,22,.35);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.68);
+      --muted2: rgba(255,255,255,.52);
+      --focus: rgba(255,255,255,.92);
+      --tile: rgba(255,255,255,.10);
+      --tile2: rgba(255,255,255,.08);
+      --shadow: 0 14px 40px rgba(0,0,0,.55);
+      --shadow2: 0 10px 26px rgba(0,0,0,.38);
+      --radius: 18px;
+      --tileRadius: 18px;
+      --tileW: 220px;
+      --tileH: 132px;
+      --gap: 16px;
+      --rowGap: 18px;
+      --padX: 54px;
+      --padTop: 22px;
+      --padBottom: 44px;
+      --topbarH: 68px;
+      --rowTitleSize: 18px;
+      --logoSize: 40px;
+      --kbdHint: 12px;
+      --danger: #ff3b30;
+      --ok: #34c759;
+      --accent: #78a6ff;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+      background: var(--bg);
+      color: var(--text);
+      overflow:hidden;
+    }
+
+    /* Background layer */
+    .bg{
+      position:fixed; inset:0;
+      background: var(--bg);
+      background-size: cover;
+      background-position: center;
+      transform: scale(1.02);
+    }
+    .bg::after{
+      content:"";
+      position:absolute; inset:0;
+      background:
+        radial-gradient(1200px 700px at 25% 20%, rgba(255,255,255,.08), transparent 55%),
+        radial-gradient(1200px 700px at 85% 30%, rgba(120,166,255,.12), transparent 60%),
+        linear-gradient(to bottom, rgba(0,0,0,.35), rgba(0,0,0,.62));
+      backdrop-filter: blur(0px);
+    }
+
+    /* Main layout */
+    .app{
+      position:relative;
+      height:100%;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .topbar{
+      height:var(--topbarH);
+      display:flex;
+      align-items:center;
+      padding: 0 var(--padX);
+      gap: 16px;
+      background: linear-gradient(to bottom, rgba(0,0,0,.45), rgba(0,0,0,0));
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width: 260px;
+    }
+    .brand .dot{
+      width:var(--logoSize);
+      height:var(--logoSize);
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(120,166,255,.95), rgba(255,255,255,.35));
+      box-shadow: var(--shadow2);
+      position:relative;
+      overflow:hidden;
+    }
+    .brand .dot::before{
+      content:"";
+      position:absolute; inset:-30%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.55), transparent 55%);
+      transform: rotate(18deg);
+    }
+    .brand .title{
+      display:flex;
+      flex-direction:column;
+      line-height:1.05;
+    }
+    .brand .title strong{
+      font-size: 16px;
+      letter-spacing:.3px;
+    }
+    .brand .title span{
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .spacer{flex:1}
+
+    .pill{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 10px 20px rgba(0,0,0,.25);
+      user-select:none;
+    }
+    .pill .hint{
+      font-size: var(--kbdHint);
+      color: var(--muted2);
+      letter-spacing:.2px;
+      white-space:nowrap;
+    }
+    .pill .key{
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 10px;
+      background: rgba(0,0,0,.28);
+      border: 1px solid rgba(255,255,255,.10);
+      color: rgba(255,255,255,.86);
+    }
+
+    .btn{
+      cursor:pointer;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.14);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 10px 12px;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+      user-select:none;
+      outline:none;
+    }
+    .btn:hover{background: rgba(255,255,255,.16)}
+    .btn:active{transform: scale(.98)}
+    .btn .ico{width:18px; height:18px; display:inline-block}
+    .btn.secondary{
+      background: rgba(255,255,255,.10);
+    }
+    .btn.danger{
+      background: rgba(255,59,48,.16);
+      border-color: rgba(255,59,48,.35);
+    }
+    .btn.ok{
+      background: rgba(52,199,89,.14);
+      border-color: rgba(52,199,89,.32);
+    }
+
+    .content{
+      position:relative;
+      flex:1;
+      overflow:auto;
+      padding: var(--padTop) var(--padX) var(--padBottom);
+      scroll-behavior: smooth;
+    }
+    /* nicer scrollbar */
+    .content::-webkit-scrollbar{width: 10px}
+    .content::-webkit-scrollbar-thumb{
+      background: rgba(255,255,255,.12);
+      border-radius: 10px;
+      border: 2px solid rgba(0,0,0,.35);
+    }
+    .content::-webkit-scrollbar-track{background: rgba(0,0,0,.18)}
+
+    .row{
+      margin-bottom: 22px;
+    }
+
+    .rowHeader{
+      display:flex;
+      align-items:center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .rowHeader .rowTitle{
+      font-size: var(--rowTitleSize);
+      letter-spacing:.2px;
+      color: rgba(255,255,255,.88);
+      display:flex;
+      align-items:center;
+      gap: 10px;
+    }
+    .rowHeader .rowMeta{
+      font-size: 12.5px;
+      color: var(--muted2);
+    }
+    .rowHeader .rowActions{
+      margin-left:auto;
+      display:flex;
+      gap: 10px;
+      align-items:center;
+    }
+    .dragHandle{
+      display:none;
+      cursor:grab;
+      width: 22px; height: 22px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.12);
+      place-items:center;
+    }
+    .dragHandle svg{opacity:.9}
+    body.editMode .dragHandle{display:inline-grid}
+
+    .strip{
+      display:flex;
+      gap: var(--gap);
+      overflow:auto;
+      padding: 8px 6px 14px;
+      scroll-behavior: smooth;
+      scrollbar-color: rgba(255,255,255,.18) rgba(0,0,0,.14);
+    }
+    .strip::-webkit-scrollbar{height: 10px}
+    .strip::-webkit-scrollbar-thumb{
+      background: rgba(255,255,255,.14);
+      border-radius: 10px;
+      border: 2px solid rgba(0,0,0,.35);
+    }
+    .strip::-webkit-scrollbar-track{background: rgba(0,0,0,.12)}
+
+    .tile{
+      position:relative;
+      min-width: var(--tileW);
+      height: var(--tileH);
+      border-radius: var(--tileRadius);
+      background: var(--tile);
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 10px 20px rgba(0,0,0,.28);
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-end;
+      padding: 12px 14px;
+      cursor:pointer;
+      outline:none;
+      transform-origin: center;
+      transition: transform .14s ease, background .14s ease, border-color .14s ease, box-shadow .14s ease;
+      user-select:none;
+      overflow:hidden;
+    }
+    .tile::before{
+      content:"";
+      position:absolute; inset:0;
+      background: radial-gradient(250px 180px at 30% 25%, rgba(255,255,255,.16), transparent 60%);
+      opacity:.9;
+    }
+    .tile::after{
+      content:"";
+      position:absolute; inset:0;
+      background: linear-gradient(to top, rgba(0,0,0,.56), transparent 60%);
+      opacity:.85;
+    }
+    .tile:hover{
+      background: rgba(255,255,255,.14);
+      border-color: rgba(255,255,255,.18);
+    }
+    .tile:focus{
+      box-shadow: 0 0 0 3px rgba(255,255,255,.34), 0 18px 40px rgba(0,0,0,.55);
+      transform: scale(1.06);
+      background: rgba(255,255,255,.16);
+      border-color: rgba(255,255,255,.22);
+    }
+
+    .tile .inner{
+      position:relative;
+      z-index:2;
+      display:flex;
+      align-items:flex-end;
+      gap:12px;
+      width:100%;
+    }
+    .tile .icon{
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display:grid;
+      place-items:center;
+      box-shadow: 0 10px 18px rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.12);
+      flex: 0 0 auto;
+      overflow:hidden;
+    }
+    .tile .icon img{
+      width:100%; height:100%;
+      object-fit:cover;
+    }
+    .tile .icon .txt{
+      font-weight: 800;
+      letter-spacing:.3px;
+      font-size: 16px;
+      color: rgba(255,255,255,.92);
+      text-shadow: 0 3px 10px rgba(0,0,0,.55);
+    }
+    .tile .label{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width: 0;
+      width:100%;
+    }
+    .tile .name{
+      font-weight: 700;
+      font-size: 15px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .tile .url{
+      font-size: 12px;
+      color: var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    /* Tile edit controls */
+    .tile .tileControls{
+      position:absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 3;
+      display:none;
+      gap:8px;
+      align-items:center;
+    }
+    body.editMode .tile .tileControls{display:flex}
+    .miniBtn{
+      width: 32px;
+      height: 32px;
+      border-radius: 12px;
+      background: rgba(0,0,0,.28);
+      border: 1px solid rgba(255,255,255,.14);
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      transition: transform .12s ease, background .12s ease;
+      user-select:none;
+    }
+    .miniBtn:hover{background: rgba(0,0,0,.36)}
+    .miniBtn:active{transform: scale(.96)}
+    .miniBtn.danger{
+      border-color: rgba(255,59,48,.35);
+      background: rgba(255,59,48,.14);
+    }
+    .miniBtn svg{width: 16px; height: 16px; opacity:.92}
+    .miniBtn.drag{cursor:grab}
+    body.editMode .tile[draggable="true"]{cursor:grab}
+
+    /* Settings drawer */
+    .drawerOverlay{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(6px);
+      display:none;
+      z-index: 40;
+    }
+    .drawerOverlay.open{display:block}
+
+    .drawer{
+      position:fixed;
+      top: 0;
+      right: 0;
+      height: 100%;
+      width: min(520px, 92vw);
+      background: linear-gradient(180deg, rgba(16,20,30,.92), rgba(12,15,24,.88));
+      border-left: 1px solid rgba(255,255,255,.12);
+      box-shadow: -20px 0 60px rgba(0,0,0,.55);
+      transform: translateX(105%);
+      transition: transform .18s ease;
+      z-index: 50;
+      display:flex;
+      flex-direction:column;
+    }
+    .drawer.open{transform: translateX(0)}
+
+    .drawerHeader{
+      padding: 18px 18px 12px;
+      display:flex;
+      align-items:center;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+    }
+    .drawerHeader .title{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    .drawerHeader strong{font-size: 16px}
+    .drawerHeader span{font-size: 12.5px; color: var(--muted)}
+    .drawerHeader .close{
+      margin-left:auto;
+    }
+
+    .tabs{
+      display:flex;
+      gap: 10px;
+      padding: 12px 18px 0;
+      flex-wrap:wrap;
+    }
+    .tab{
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.08);
+      cursor:pointer;
+      user-select:none;
+      font-size: 13px;
+      color: rgba(255,255,255,.85);
+      transition: background .12s ease, transform .12s ease;
+    }
+    .tab:hover{background: rgba(255,255,255,.10)}
+    .tab.active{
+      background: rgba(120,166,255,.20);
+      border-color: rgba(120,166,255,.42);
+    }
+
+    .drawerBody{
+      padding: 14px 18px 18px;
+      overflow:auto;
+    }
+    .drawerBody::-webkit-scrollbar{width: 10px}
+    .drawerBody::-webkit-scrollbar-thumb{
+      background: rgba(255,255,255,.14);
+      border-radius: 10px;
+      border: 2px solid rgba(0,0,0,.35);
+    }
+    .drawerBody::-webkit-scrollbar-track{background: rgba(0,0,0,.12)}
+
+    .section{
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .section h3{
+      margin: 0 0 10px;
+      font-size: 14px;
+      letter-spacing:.2px;
+      color: rgba(255,255,255,.88);
+    }
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .field label{
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .input, select, textarea{
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.12);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 10px 12px;
+      outline:none;
+      font-size: 14px;
+    }
+    textarea{min-height: 72px; resize: vertical}
+    .row2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .muted{
+      color: var(--muted2);
+      font-size: 12.5px;
+      line-height:1.35;
+    }
+    .split{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .hr{
+      height:1px;
+      background: rgba(255,255,255,.10);
+      margin: 12px 0;
+    }
+
+    /* Lists and apps manager */
+    .itemCard{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      padding: 10px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      margin-bottom: 8px;
+    }
+    .itemCard .badge{
+      width: 38px; height: 38px;
+      border-radius: 14px;
+      display:grid;
+      place-items:center;
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 10px 18px rgba(0,0,0,.28);
+      overflow:hidden;
+      flex:0 0 auto;
+    }
+    .itemCard .badge img{width:100%; height:100%; object-fit:cover}
+    .itemCard .meta{
+      display:flex;
+      flex-direction:column;
+      gap: 2px;
+      min-width:0;
+      flex:1;
+    }
+    .itemCard .meta strong{
+      font-size: 13.5px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .itemCard .meta span{
+      font-size: 12px;
+      color: var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .itemCard .actions{
+      display:flex;
+      gap: 8px;
+      align-items:center;
+    }
+
+    .toggleRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .toggleRow .left{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width:0;
+    }
+    .toggleRow .left strong{
+      font-size: 13.5px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .toggleRow .left span{
+      font-size: 12px;
+      color: var(--muted);
+      line-height:1.35;
+    }
+    .switch{
+      position:relative;
+      width: 46px;
+      height: 28px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.16);
+      border: 1px solid rgba(255,255,255,.14);
+      cursor:pointer;
+      flex: 0 0 auto;
+      transition: background .12s ease, border-color .12s ease;
+    }
+    .switch::after{
+      content:"";
+      position:absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 10px 18px rgba(0,0,0,.28);
+      transition: transform .12s ease, background .12s ease;
+    }
+    .switch.on{
+      background: rgba(120,166,255,.25);
+      border-color: rgba(120,166,255,.45);
+    }
+    .switch.on::after{
+      transform: translateX(18px);
+      background: rgba(255,255,255,.88);
+      border-color: rgba(255,255,255,.25);
+    }
+
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,.58);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 999px;
+      padding: 10px 14px;
+      color: rgba(255,255,255,.88);
+      font-size: 13px;
+      box-shadow: var(--shadow2);
+      display:none;
+      z-index: 80;
+      max-width: min(720px, 92vw);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .toast.show{display:block}
+
+    /* DnD indicators */
+    .dropHint{
+      outline: 3px dashed rgba(120,166,255,.55);
+      outline-offset: 4px;
+    }
+
+    /* Mobile-ish fallback */
+    @media (max-width: 900px){
+      :root{
+        --padX: 18px;
+        --tileW: 200px;
+        --tileH: 124px;
+      }
+      .brand{min-width:auto}
+      .pill{display:none}
+    }
+  </style>
+</head>
+<body>
+  <div class="bg" id="bg"></div>
+
+  <div class="app" id="app">
+    <div class="topbar">
+      <div class="brand" title="TV Home">
+        <div class="dot" aria-hidden="true"></div>
+        <div class="title">
+          <strong>TV Home</strong>
+          <span id="subTitle">Arrow keys • Enter • S for settings • E for edit</span>
+        </div>
+      </div>
+
+      <div class="pill" aria-hidden="true">
+        <span class="hint">Settings</span><span class="key">S</span>
+        <span class="hint">Edit mode</span><span class="key">E</span>
+        <span class="hint">Back</span><span class="key">Esc</span>
+      </div>
+
+      <div class="spacer"></div>
+
+      <button class="btn secondary" id="editBtn" type="button" title="Toggle edit mode (E)">
+        <span class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 20h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </span>
+        <span id="editBtnLabel">Edit</span>
+      </button>
+
+      <button class="btn" id="settingsBtn" type="button" title="Open settings (S)">
+        <span class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a7.8 7.8 0 0 0 .1-1 7.8 7.8 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7.6 7.6 0 0 0-1.7-1l-.4-2.6h-4l-.4 2.6a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.5 2 1.5a7.8 7.8 0 0 0-.1 1 7.8 7.8 0 0 0 .1 1l-2 1.5 2 3.5 2.4-1a7.6 7.6 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </span>
+        Settings
+      </button>
+    </div>
+
+    <div class="content" id="content" tabindex="-1" aria-label="TV Home content"></div>
+  </div>
+
+  <!-- Drawer -->
+  <div class="drawerOverlay" id="drawerOverlay" aria-hidden="true"></div>
+  <aside class="drawer" id="drawer" aria-label="Settings drawer" aria-hidden="true">
+    <div class="drawerHeader">
+      <div class="title">
+        <strong>Settings</strong>
+        <span>Manage apps, lists, backgrounds, and layout</span>
+      </div>
+      <button class="btn secondary close" id="closeDrawerBtn" type="button">
+        <span class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </span>
+        Close
+      </button>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Settings tabs">
+      <div class="tab active" data-tab="apps" role="tab" tabindex="0" aria-selected="true">Apps</div>
+      <div class="tab" data-tab="lists" role="tab" tabindex="0" aria-selected="false">Lists</div>
+      <div class="tab" data-tab="background" role="tab" tabindex="0" aria-selected="false">Background</div>
+      <div class="tab" data-tab="preferences" role="tab" tabindex="0" aria-selected="false">Preferences</div>
+      <div class="tab" data-tab="importexport" role="tab" tabindex="0" aria-selected="false">Import/Export</div>
+      <div class="tab" data-tab="about" role="tab" tabindex="0" aria-selected="false">About</div>
+    </div>
+
+    <div class="drawerBody" id="drawerBody"></div>
+  </aside>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    /*********************
+     * TV Home (single file)
+     * - Android TV-ish rows + tiles
+     * - Add/edit/remove apps
+     * - Create lists (rows), assign apps, reorder lists
+     * - Reorder tiles within a list (drag & drop in Edit mode)
+     * - Background: gradient presets, color, image URL, or upload
+     * - Preferences: open links in same tab or new tab (toggle)
+     * - Keyboard navigation (Arrow keys, Enter), Settings (S), Edit (E), Close (Esc)
+     *********************/
+
+    const STORAGE_KEY = "tv_home_state_v1";
+
+    const DEFAULT_STATE = () => ({
+      version: 1,
+      preferences: {
+        openLinksInNewTab: true
+      },
+      background: {
+        mode: "preset", // preset | color | url | upload
+        value: "Aurora" // preset name or color hex or image url or dataUrl
+      },
+      editMode: false,
+      apps: {
+        "netflix": { id:"netflix", name:"Netflix", url:"https://www.netflix.com", iconType:"text", iconValue:"N", color:"#e50914" },
+        "plex": { id:"plex", name:"Plex", url:"https://app.plex.tv", iconType:"text", iconValue:"P", color:"#fdbd1a" },
+        "hulu": { id:"hulu", name:"Hulu", url:"https://www.hulu.com", iconType:"text", iconValue:"H", color:"#1ce783" },
+        "disney": { id:"disney", name:"Disney+", url:"https://www.disneyplus.com", iconType:"text", iconValue:"D+", color:"#113ccf" }
+      },
+      lists: [
+        { id: uid("list"), name: "Favorites", appIds: ["netflix","plex","hulu","disney"] },
+        { id: uid("list"), name: "Streaming", appIds: ["netflix","hulu","disney"] }
+      ]
+    });
+
+    // Preset gradients (simple, "TV-ish")
+    const BG_PRESETS = [
+      { name: "Aurora", css: "radial-gradient(1200px 700px at 15% 20%, rgba(120,166,255,.55), transparent 55%), radial-gradient(900px 700px at 80% 30%, rgba(255,255,255,.22), transparent 60%), linear-gradient(135deg, #0b0f17, #0a1230)" },
+      { name: "Neon Night", css: "radial-gradient(900px 700px at 20% 25%, rgba(255,0,128,.25), transparent 55%), radial-gradient(900px 700px at 85% 35%, rgba(0,210,255,.25), transparent 60%), linear-gradient(135deg, #070911, #0b1030)" },
+      { name: "Cobalt", css: "radial-gradient(1100px 700px at 25% 15%, rgba(0,140,255,.30), transparent 55%), radial-gradient(900px 700px at 85% 35%, rgba(255,255,255,.18), transparent 60%), linear-gradient(135deg, #070b12, #081a3a)" },
+      { name: "Warm Cinema", css: "radial-gradient(900px 700px at 20% 25%, rgba(255,180,80,.22), transparent 55%), radial-gradient(900px 700px at 85% 35%, rgba(255,80,80,.18), transparent 60%), linear-gradient(135deg, #0a0b12, #2a0d10)" },
+      { name: "Forest", css: "radial-gradient(900px 700px at 20% 25%, rgba(80,255,160,.16), transparent 55%), radial-gradient(900px 700px at 85% 35%, rgba(120,166,255,.14), transparent 60%), linear-gradient(135deg, #07110d, #071b14)" }
+    ];
+
+    const el = (sel, root=document) => root.querySelector(sel);
+    const els = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+    const content = el("#content");
+    const bgEl = el("#bg");
+    const editBtn = el("#editBtn");
+    const editBtnLabel = el("#editBtnLabel");
+    const settingsBtn = el("#settingsBtn");
+    const drawer = el("#drawer");
+    const drawerOverlay = el("#drawerOverlay");
+    const closeDrawerBtn = el("#closeDrawerBtn");
+    const drawerBody = el("#drawerBody");
+    const toastEl = el("#toast");
+
+    let state = loadState();
+    // Ensure preferences exists (back-compat)
+    state.preferences = state.preferences || { openLinksInNewTab: true };
+    if(typeof state.preferences.openLinksInNewTab !== "boolean") state.preferences.openLinksInNewTab = true;
+
+    applyBackground();
+    setEditMode(!!state.editMode, { silent:true });
+    renderHome();
+
+    // Drawer tabs
+    els(".tab").forEach(t => t.addEventListener("click", () => setTab(t.dataset.tab)));
+    els(".tab").forEach(t => t.addEventListener("keydown", (e) => {
+      if(e.key === "Enter" || e.key === " "){ e.preventDefault(); setTab(t.dataset.tab); }
+    }));
+
+    // Top buttons
+    settingsBtn.addEventListener("click", () => openDrawer());
+    closeDrawerBtn.addEventListener("click", () => closeDrawer());
+    drawerOverlay.addEventListener("click", () => closeDrawer());
+
+    editBtn.addEventListener("click", () => setEditMode(!state.editMode));
+
+    // Keyboard shortcuts + navigation
+    document.addEventListener("keydown", (e) => {
+      // If focus is inside an input/textarea/select, only handle Esc globally
+      const tag = (document.activeElement?.tagName || "").toLowerCase();
+      const isTyping = ["input","textarea","select"].includes(tag) || document.activeElement?.isContentEditable;
+
+      if(e.key === "Escape"){
+        if(isDrawerOpen()) closeDrawer();
+        else if(state.editMode) setEditMode(false);
+        return;
+      }
+
+      if(isTyping) return;
+
+      if(e.key.toLowerCase() === "s"){
+        e.preventDefault();
+        isDrawerOpen() ? closeDrawer() : openDrawer("apps");
+        return;
+      }
+
+      if(e.key.toLowerCase() === "e"){
+        e.preventDefault();
+        setEditMode(!state.editMode);
+        return;
+      }
+
+      // Arrow navigation between tiles
+      const active = document.activeElement;
+      if(active && active.classList.contains("tile")){
+        handleTileNav(e);
+      }
+    });
+
+    /*********************
+     * Rendering
+     *********************/
+    function renderHome(){
+      // Defensive: remove unknown appIds from lists
+      for(const list of state.lists){
+        list.appIds = list.appIds.filter(id => !!state.apps[id]);
+      }
+      saveState();
+
+      content.innerHTML = "";
+      state.lists.forEach((list, rowIndex) => {
+        const row = document.createElement("section");
+        row.className = "row";
+        row.dataset.listId = list.id;
+        row.dataset.rowIndex = String(rowIndex);
+
+        const header = document.createElement("div");
+        header.className = "rowHeader";
+
+        const title = document.createElement("div");
+        title.className = "rowTitle";
+
+        const handle = document.createElement("div");
+        handle.className = "dragHandle";
+        handle.title = "Drag to reorder list (Edit mode)";
+        handle.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M9 7h2M13 7h2M9 12h2M13 12h2M9 17h2M13 17h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        `;
+        title.appendChild(handle);
+
+        const tText = document.createElement("span");
+        tText.textContent = list.name;
+        title.appendChild(tText);
+
+        const meta = document.createElement("div");
+        meta.className = "rowMeta";
+        meta.textContent = `${list.appIds.length} app${list.appIds.length === 1 ? "" : "s"}`;
+
+        const actions = document.createElement("div");
+        actions.className = "rowActions";
+        actions.innerHTML = `
+          <button class="btn secondary" type="button" data-action="addAppToList" title="Add app to this list">
+            <span class="ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            Add app
+          </button>
+          <button class="btn secondary" type="button" data-action="renameList" title="Rename list">Rename</button>
+        `;
+
+        header.appendChild(title);
+        header.appendChild(meta);
+        header.appendChild(actions);
+
+        const strip = document.createElement("div");
+        strip.className = "strip";
+        strip.setAttribute("role","list");
+        strip.setAttribute("aria-label", list.name);
+
+        // Row drag-drop (list reorder) - header handle
+        attachListDnD(row, header, handle);
+
+        // Tiles
+        list.appIds.forEach((appId, tileIndex) => {
+          const app = state.apps[appId];
+          const tile = buildTile(app, { listId: list.id, rowIndex, tileIndex });
+          strip.appendChild(tile);
+        });
+
+        // Optional "Add tile" placeholder in edit mode (UI convenience)
+        if(state.editMode){
+          const add = document.createElement("div");
+          add.className = "tile";
+          add.tabIndex = 0;
+          add.dataset.placeholder = "add";
+          add.dataset.listId = list.id;
+          add.innerHTML = `
+            <div class="inner">
+              <div class="icon" style="background: rgba(255,255,255,.10);">
+                <div class="txt">+</div>
+              </div>
+              <div class="label">
+                <div class="name">Add app</div>
+                <div class="url">to ${escapeHtml(list.name)}</div>
+              </div>
+            </div>
+          `;
+          add.addEventListener("click", () => {
+            openDrawer("apps");
+            showToast("Tip: Add or select an app, then assign it to a list.");
+          });
+          add.addEventListener("keydown", (e) => {
+            if(e.key === "Enter" || e.key === " "){ e.preventDefault(); add.click(); }
+          });
+          strip.appendChild(add);
+        }
+
+        row.appendChild(header);
+        row.appendChild(strip);
+        content.appendChild(row);
+
+        // Row action handlers
+        actions.addEventListener("click", (e) => {
+          const btn = e.target.closest("button");
+          if(!btn) return;
+          const act = btn.dataset.action;
+          if(act === "addAppToList"){
+            openDrawer("apps");
+            // remember target list for quick assigning
+            state._ui = state._ui || {};
+            state._ui.assignTargetListId = list.id;
+            saveState();
+            showToast(`Choose an app and click "Add to list" → ${list.name}`);
+            renderDrawer(); // refresh apps tab to reflect target
+          } else if(act === "renameList"){
+            promptRenameList(list.id);
+          }
+        });
+
+        // Strip DnD for tiles
+        attachTileDnD(strip, list.id);
+      });
+
+      // Ensure there is at least one focusable tile
+      queueMicrotask(() => {
+        const firstTile = el(".tile", content);
+        if(firstTile && document.activeElement === document.body){
+          firstTile.focus();
+        }
+      });
+    }
+
+    function buildTile(app, { listId, rowIndex, tileIndex }){
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.tabIndex = 0;
+      tile.dataset.appId = app.id;
+      tile.dataset.listId = listId;
+      tile.dataset.rowIndex = String(rowIndex);
+      tile.dataset.tileIndex = String(tileIndex);
+
+      // Icon rendering
+      const iconHTML = (() => {
+        if(app.iconType === "image" && app.iconValue){
+          return `<img alt="" src="${escapeAttr(app.iconValue)}" />`;
+        }
+        // Default: text badge (initials)
+        const label = (app.iconValue || initials(app.name)).slice(0,3);
+        return `<div class="txt">${escapeHtml(label)}</div>`;
+      })();
+
+      const iconBg = app.color || colorFromString(app.name);
+      tile.innerHTML = `
+        <div class="tileControls" aria-hidden="${state.editMode ? "false" : "true"}">
+          <div class="miniBtn drag" title="Drag to reorder (Edit mode)" data-action="drag">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M9 7h2M13 7h2M9 12h2M13 12h2M9 17h2M13 17h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="miniBtn" title="Edit app" data-action="edit">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 20h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="miniBtn danger" title="Remove from this list" data-action="removeFromList">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="inner">
+          <div class="icon" style="background:${escapeAttr(iconBg)};">
+            ${iconHTML}
+          </div>
+          <div class="label">
+            <div class="name">${escapeHtml(app.name)}</div>
+            <div class="url">${escapeHtml(prettyUrl(app.url))}</div>
+          </div>
+        </div>
+      `;
+
+      // Click = open app
+      tile.addEventListener("click", (e) => {
+        const ctrl = e.target.closest(".miniBtn");
+        if(ctrl){
+          // Edit controls
+          const action = ctrl.dataset.action;
+          if(action === "removeFromList"){
+            removeAppFromList(listId, app.id);
+          } else if(action === "edit"){
+            openDrawer("apps");
+            state._ui = state._ui || {};
+            state._ui.editAppId = app.id;
+            saveState();
+            renderDrawer();
+            showToast(`Editing "${app.name}"`);
+          }
+          return;
+        }
+        openUrl(app.url);
+      });
+
+      tile.addEventListener("keydown", (e) => {
+        if(e.key === "Enter" || e.key === " "){
+          e.preventDefault();
+          openUrl(app.url);
+        }
+      });
+
+      // Draggable only in edit mode
+      tile.draggable = !!state.editMode;
+
+      return tile;
+    }
+
+    /*********************
+     * Keyboard navigation (Arrow keys)
+     *********************/
+    function handleTileNav(e){
+      const key = e.key;
+      const active = document.activeElement;
+      if(!active || !active.classList.contains("tile")) return;
+
+      const row = active.closest(".row");
+      const strip = el(".strip", row);
+
+      const tilesInRow = els(".tile", strip).filter(t => !t.dataset.placeholder); // exclude placeholder for index mapping
+      const allRows = els(".row", content);
+
+      // Find indices
+      const rowIdx = allRows.findIndex(r => r === row);
+      let idx = tilesInRow.findIndex(t => t === active);
+      if(idx < 0){
+        // Might be the placeholder "Add app"
+        idx = tilesInRow.length - 1;
+      }
+
+      // Navigation helpers
+      const focusTile = (rIdx, tIdx) => {
+        const r = allRows[rIdx];
+        if(!r) return;
+        const s = el(".strip", r);
+        const realTiles = els(".tile", s).filter(t => !t.dataset.placeholder);
+        const t = realTiles[Math.max(0, Math.min(tIdx, realTiles.length - 1))] || el(".tile", s);
+        if(t){
+          t.focus({preventScroll:true});
+          t.scrollIntoView({behavior:"smooth", block:"nearest", inline:"center"});
+        }
+      };
+
+      if(key === "ArrowRight"){
+        e.preventDefault();
+        const next = tilesInRow[idx + 1] || tilesInRow[idx] || active;
+        next.focus({preventScroll:true});
+        next.scrollIntoView({behavior:"smooth", block:"nearest", inline:"center"});
+      } else if(key === "ArrowLeft"){
+        e.preventDefault();
+        const prev = tilesInRow[idx - 1] || tilesInRow[0] || active;
+        prev.focus({preventScroll:true});
+        prev.scrollIntoView({behavior:"smooth", block:"nearest", inline:"center"});
+      } else if(key === "ArrowDown"){
+        e.preventDefault();
+        focusTile(Math.min(rowIdx + 1, allRows.length - 1), idx);
+      } else if(key === "ArrowUp"){
+        e.preventDefault();
+        focusTile(Math.max(rowIdx - 1, 0), idx);
+      }
+    }
+
+    /*********************
+     * Tile Drag & Drop (Edit mode)
+     *********************/
+    function attachTileDnD(stripEl, listId){
+      // Only active in edit mode
+      const refreshDraggable = () => {
+        els(".tile", stripEl).forEach(t => {
+          if(t.dataset.placeholder) return;
+          t.draggable = !!state.editMode;
+        });
+      };
+      refreshDraggable();
+
+      stripEl.addEventListener("dragstart", (e) => {
+        if(!state.editMode) return;
+        const tile = e.target.closest(".tile");
+        if(!tile || tile.dataset.placeholder) return;
+        const appId = tile.dataset.appId;
+        const srcListId = tile.dataset.listId;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", JSON.stringify({ type:"tile", appId, srcListId }));
+        tile.classList.add("dropHint");
+      });
+
+      stripEl.addEventListener("dragend", (e) => {
+        const tile = e.target.closest(".tile");
+        if(tile) tile.classList.remove("dropHint");
+        els(".tile", stripEl).forEach(t => t.classList.remove("dropHint"));
+      });
+
+      stripEl.addEventListener("dragover", (e) => {
+        if(!state.editMode) return;
+        const overTile = e.target.closest(".tile");
+        if(overTile && !overTile.dataset.placeholder){
+          e.preventDefault();
+          overTile.classList.add("dropHint");
+        } else {
+          // allow dropping into empty strip area (append)
+          e.preventDefault();
+        }
+      });
+
+      stripEl.addEventListener("dragleave", (e) => {
+        const tile = e.target.closest(".tile");
+        if(tile) tile.classList.remove("dropHint");
+      });
+
+      stripEl.addEventListener("drop", (e) => {
+        if(!state.editMode) return;
+        e.preventDefault();
+        const data = safeJson(e.dataTransfer.getData("text/plain"));
+        if(!data || data.type !== "tile") return;
+
+        const destListId = listId;
+        const overTile = e.target.closest(".tile");
+        const destList = state.lists.find(l => l.id === destListId);
+        const srcList = state.lists.find(l => l.id === data.srcListId);
+        if(!destList || !srcList) return;
+        if(!state.apps[data.appId]) return;
+
+        // Remove from source
+        srcList.appIds = srcList.appIds.filter(id => id !== data.appId);
+
+        // Determine insert position
+        let insertIndex = destList.appIds.length; // append default
+        if(overTile && !overTile.dataset.placeholder && overTile.dataset.appId){
+          const overId = overTile.dataset.appId;
+          insertIndex = destList.appIds.indexOf(overId);
+          if(insertIndex < 0) insertIndex = destList.appIds.length;
+        }
+
+        // Avoid duplicates in same list
+        destList.appIds = destList.appIds.filter(id => id !== data.appId);
+        destList.appIds.splice(insertIndex, 0, data.appId);
+
+        saveState();
+        renderHome();
+        showToast(`Moved "${state.apps[data.appId].name}"`);
+      });
+    }
+
+    /*********************
+     * List Drag & Drop (Edit mode) — reorder rows
+     *********************/
+    function attachListDnD(rowEl, headerEl, handleEl){
+      // We drag the whole row by grabbing the handle
+      handleEl.addEventListener("mousedown", () => {
+        if(!state.editMode) return;
+        rowEl.setAttribute("draggable", "true");
+      });
+      handleEl.addEventListener("mouseup", () => rowEl.removeAttribute("draggable"));
+      handleEl.addEventListener("mouseleave", () => rowEl.removeAttribute("draggable"));
+
+      rowEl.addEventListener("dragstart", (e) => {
+        if(!state.editMode) return;
+        const listId = rowEl.dataset.listId;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", JSON.stringify({ type:"list", listId }));
+        rowEl.classList.add("dropHint");
+      });
+
+      rowEl.addEventListener("dragend", () => {
+        rowEl.classList.remove("dropHint");
+        els(".row", content).forEach(r => r.classList.remove("dropHint"));
+      });
+
+      rowEl.addEventListener("dragover", (e) => {
+        if(!state.editMode) return;
+        const data = safeJson(e.dataTransfer.getData("text/plain"));
+        if(!data || data.type !== "list") return;
+        e.preventDefault();
+        rowEl.classList.add("dropHint");
+      });
+
+      rowEl.addEventListener("dragleave", () => rowEl.classList.remove("dropHint"));
+
+      rowEl.addEventListener("drop", (e) => {
+        if(!state.editMode) return;
+        e.preventDefault();
+        rowEl.classList.remove("dropHint");
+        const data = safeJson(e.dataTransfer.getData("text/plain"));
+        if(!data || data.type !== "list") return;
+
+        const srcId = data.listId;
+        const destId = rowEl.dataset.listId;
+        if(srcId === destId) return;
+
+        const srcIndex = state.lists.findIndex(l => l.id === srcId);
+        const destIndex = state.lists.findIndex(l => l.id === destId);
+        if(srcIndex < 0 || destIndex < 0) return;
+
+        const [moved] = state.lists.splice(srcIndex, 1);
+        state.lists.splice(destIndex, 0, moved);
+
+        saveState();
+        renderHome();
+        showToast(`Reordered list: "${moved.name}"`);
+      });
+    }
+
+    /*********************
+     * Drawer content
+     *********************/
+    function openDrawer(tab="apps"){
+      drawerOverlay.classList.add("open");
+      drawer.classList.add("open");
+      drawer.setAttribute("aria-hidden","false");
+      drawerOverlay.setAttribute("aria-hidden","false");
+      setTab(tab);
+      // Focus first tab for keyboard users
+      queueMicrotask(() => el(`.tab[data-tab="${tab}"]`)?.focus());
+    }
+
+    function closeDrawer(){
+      drawerOverlay.classList.remove("open");
+      drawer.classList.remove("open");
+      drawer.setAttribute("aria-hidden","true");
+      drawerOverlay.setAttribute("aria-hidden","true");
+      // Return focus to a tile if possible
+      queueMicrotask(() => {
+        const focused = el(".tile:focus", content);
+        if(focused) return;
+        el(".tile", content)?.focus();
+      });
+    }
+
+    function isDrawerOpen(){
+      return drawer.classList.contains("open");
+    }
+
+    function setTab(tabName){
+      els(".tab").forEach(t => {
+        const active = (t.dataset.tab === tabName);
+        t.classList.toggle("active", active);
+        t.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      state._ui = state._ui || {};
+      state._ui.activeTab = tabName;
+      saveState();
+      renderDrawer();
+    }
+
+    function renderDrawer(){
+      const tab = state._ui?.activeTab || "apps";
+
+      if(tab === "apps"){
+        drawerBody.innerHTML = renderAppsTab();
+        wireAppsTab();
+      } else if(tab === "lists"){
+        drawerBody.innerHTML = renderListsTab();
+        wireListsTab();
+      } else if(tab === "background"){
+        drawerBody.innerHTML = renderBackgroundTab();
+        wireBackgroundTab();
+      } else if(tab === "preferences"){
+        drawerBody.innerHTML = renderPreferencesTab();
+        wirePreferencesTab();
+      } else if(tab === "importexport"){
+        drawerBody.innerHTML = renderImportExportTab();
+        wireImportExportTab();
+      } else {
+        drawerBody.innerHTML = renderAboutTab();
+      }
+    }
+
+    function renderAppsTab(){
+      const apps = Object.values(state.apps).sort((a,b) => a.name.localeCompare(b.name));
+      const targetListId = state._ui?.assignTargetListId;
+      const targetList = state.lists.find(l => l.id === targetListId);
+
+      const targetBanner = targetList ? `
+        <div class="section" style="border-color: rgba(120,166,255,.35); background: rgba(120,166,255,.10);">
+          <h3>Quick assign</h3>
+          <div class="muted">Click <b>Add to list</b> on any app to add it to: <b>${escapeHtml(targetList.name)}</b></div>
+          <div class="split" style="margin-top:10px">
+            <button class="btn secondary" id="clearAssignTargetBtn" type="button">Clear target</button>
+            <button class="btn secondary" id="jumpToListsBtn" type="button">Go to Lists</button>
+          </div>
+        </div>
+      ` : "";
+
+      return `
+        ${targetBanner}
+
+        <div class="section">
+          <h3>Add / edit app</h3>
+
+          <div class="field">
+            <label>App name</label>
+            <input class="input" id="appName" placeholder="e.g., YouTube" />
+          </div>
+
+          <div class="field">
+            <label>App URL</label>
+            <input class="input" id="appUrl" placeholder="https://..." />
+          </div>
+
+          <div class="row2">
+            <div class="field">
+              <label>Icon type</label>
+              <select id="iconType">
+                <option value="text">Text badge</option>
+                <option value="image">Image URL</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Icon value (initials or image URL)</label>
+              <input class="input" id="iconValue" placeholder="N or https://..." />
+            </div>
+          </div>
+
+          <div class="row2">
+            <div class="field">
+              <label>Accent color (optional)</label>
+              <input class="input" id="appColor" placeholder="#78a6ff" />
+            </div>
+            <div class="field">
+              <label>Add to list (optional)</label>
+              <select id="addToListSelect">
+                <option value="">(don’t add)</option>
+                ${state.lists.map(l => `<option value="${escapeAttr(l.id)}">${escapeHtml(l.name)}</option>`).join("")}
+              </select>
+            </div>
+          </div>
+
+          <div class="split">
+            <button class="btn ok" id="saveAppBtn" type="button">
+              <span class="ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" stroke="currentColor" stroke-width="2"/><path d="M17 21v-8H7v8" stroke="currentColor" stroke-width="2"/><path d="M7 3v5h8" stroke="currentColor" stroke-width="2"/></svg>
+              </span>
+              Save app
+            </button>
+            <button class="btn secondary" id="resetAppFormBtn" type="button">Reset</button>
+          </div>
+
+          <div class="muted" style="margin-top:10px">
+            Tip: Use an image URL for icons if you want “real app badges”.
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>All apps</h3>
+          <div class="muted">Assign apps to lists, edit, or remove.</div>
+          <div class="hr"></div>
+
+          <div id="appsList">
+            ${apps.length ? apps.map(a => appCardHTML(a)).join("") : `<div class="muted">No apps yet.</div>`}
+          </div>
+        </div>
+      `;
+    }
+
+    function appCardHTML(app){
+      const badge = app.iconType === "image" && app.iconValue
+        ? `<img alt="" src="${escapeAttr(app.iconValue)}" />`
+        : `<div style="font-weight:800">${escapeHtml((app.iconValue||initials(app.name)).slice(0,3))}</div>`;
+
+      const badgeBg = app.color || colorFromString(app.name);
+      const targetListId = state._ui?.assignTargetListId;
+      const addBtnLabel = targetListId ? "Add to target list" : "Add to list";
+
+      return `
+        <div class="itemCard" data-app-id="${escapeAttr(app.id)}">
+          <div class="badge" style="background:${escapeAttr(badgeBg)}">${badge}</div>
+          <div class="meta">
+            <strong>${escapeHtml(app.name)}</strong>
+            <span>${escapeHtml(prettyUrl(app.url))}</span>
+          </div>
+          <div class="actions">
+            <button class="btn secondary" data-action="addToList" type="button">${addBtnLabel}</button>
+            <button class="btn secondary" data-action="edit" type="button">Edit</button>
+            <button class="btn danger" data-action="delete" type="button">Delete</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function wireAppsTab(){
+      const appName = el("#appName", drawerBody);
+      const appUrl = el("#appUrl", drawerBody);
+      const iconType = el("#iconType", drawerBody);
+      const iconValue = el("#iconValue", drawerBody);
+      const appColor = el("#appColor", drawerBody);
+      const addToListSelect = el("#addToListSelect", drawerBody);
+      const saveAppBtn = el("#saveAppBtn", drawerBody);
+      const resetAppFormBtn = el("#resetAppFormBtn", drawerBody);
+
+      // Quick assign banner
+      el("#clearAssignTargetBtn", drawerBody)?.addEventListener("click", () => {
+        if(state._ui) delete state._ui.assignTargetListId;
+        saveState();
+        renderDrawer();
+      });
+      el("#jumpToListsBtn", drawerBody)?.addEventListener("click", () => setTab("lists"));
+
+      // Load edit target if present
+      const editId = state._ui?.editAppId;
+      if(editId && state.apps[editId]){
+        const a = state.apps[editId];
+        appName.value = a.name || "";
+        appUrl.value = a.url || "";
+        iconType.value = a.iconType || "text";
+        iconValue.value = a.iconValue || "";
+        appColor.value = a.color || "";
+        // Don't auto-add while editing
+        addToListSelect.value = "";
+      }
+
+      // Icon type changes placeholder
+      iconType.addEventListener("change", () => {
+        iconValue.placeholder = (iconType.value === "image") ? "https://... (image URL)" : "N or D+ (badge text)";
+      });
+
+      resetAppFormBtn.addEventListener("click", () => {
+        if(state._ui) delete state._ui.editAppId;
+        saveState();
+        renderDrawer();
+      });
+
+      saveAppBtn.addEventListener("click", () => {
+        const name = (appName.value || "").trim();
+        const url = (appUrl.value || "").trim();
+        const it = iconType.value;
+        const iv = (iconValue.value || "").trim();
+        const color = (appColor.value || "").trim();
+        const listIdToAdd = addToListSelect.value || "";
+
+        if(!name){
+          showToast("App name is required.");
+          appName.focus();
+          return;
+        }
+        if(!isProbablyUrl(url)){
+          showToast("Please enter a valid URL (include https://).");
+          appUrl.focus();
+          return;
+        }
+
+        // Create or update
+        let id = editId && state.apps[editId] ? editId : uid("app");
+
+        state.apps[id] = {
+          id,
+          name,
+          url,
+          iconType: it,
+          iconValue: iv || (it === "text" ? initials(name) : ""),
+          color: normalizeColor(color) || (state.apps[id]?.color) || ""
+        };
+
+        // Add to list if requested (or quick assign target)
+        const targetListId = state._ui?.assignTargetListId;
+        if(targetListId){
+          addAppToList(targetListId, id);
+        } else if(listIdToAdd){
+          addAppToList(listIdToAdd, id);
+        }
+
+        if(state._ui) delete state._ui.editAppId;
+        saveState();
+        renderDrawer();
+        renderHome();
+        showToast(`Saved "${name}"`);
+      });
+
+      // App cards actions
+      els(".itemCard", drawerBody).forEach(card => {
+        card.addEventListener("click", (e) => {
+          const btn = e.target.closest("button");
+          if(!btn) return;
+          const appId = card.dataset.appId;
+          const action = btn.dataset.action;
+
+          if(action === "edit"){
+            state._ui = state._ui || {};
+            state._ui.editAppId = appId;
+            saveState();
+            renderDrawer();
+            showToast("Edit the form above, then Save.");
+          }
+
+          if(action === "delete"){
+            const app = state.apps[appId];
+            if(!app) return;
+            if(!confirm(`Delete "${app.name}"? It will be removed from all lists.`)) return;
+            delete state.apps[appId];
+            for(const l of state.lists){
+              l.appIds = l.appIds.filter(id => id !== appId);
+            }
+            // Clear edit state if needed
+            if(state._ui?.editAppId === appId) delete state._ui.editAppId;
+            saveState();
+            renderDrawer();
+            renderHome();
+            showToast(`Deleted "${app.name}"`);
+          }
+
+          if(action === "addToList"){
+            // If quick-assign is set, use it. Otherwise ask.
+            const target = state._ui?.assignTargetListId;
+            if(target){
+              addAppToList(target, appId);
+              saveState();
+              renderHome();
+              showToast(`Added to "${state.lists.find(l => l.id === target)?.name || "list"}"`);
+              return;
+            }
+            // Prompt pick list
+            promptPickList(`Add "${state.apps[appId]?.name || "app"}" to which list?`, (listId) => {
+              addAppToList(listId, appId);
+              saveState();
+              renderHome();
+              showToast("Added to list.");
+            });
+          }
+        });
+      });
+    }
+
+    function renderListsTab(){
+      const listCards = state.lists.map((l, idx) => {
+        return `
+          <div class="itemCard" data-list-id="${escapeAttr(l.id)}">
+            <div class="badge" style="background: rgba(255,255,255,.10)"><div style="font-weight:800">${idx+1}</div></div>
+            <div class="meta">
+              <strong>${escapeHtml(l.name)}</strong>
+              <span>${l.appIds.length} app${l.appIds.length===1?"":"s"}</span>
+            </div>
+            <div class="actions">
+              <button class="btn secondary" data-action="moveUp" type="button">Up</button>
+              <button class="btn secondary" data-action="moveDown" type="button">Down</button>
+              <button class="btn secondary" data-action="rename" type="button">Rename</button>
+              <button class="btn danger" data-action="delete" type="button">Delete</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div class="section">
+          <h3>Lists (rows)</h3>
+          <div class="muted">Lists are the horizontal rows on the home screen. Reorder them here or drag the handle next to each row title (in Edit mode).</div>
+          <div class="hr"></div>
+
+          <div class="field">
+            <label>New list name</label>
+            <input class="input" id="newListName" placeholder="e.g., Movies, Games, Kids…" />
+          </div>
+
+          <div class="split">
+            <button class="btn ok" id="createListBtn" type="button">
+              <span class="ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </span>
+              Create list
+            </button>
+            <button class="btn secondary" id="toggleEditModeBtn" type="button">Toggle Edit mode</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>All lists</h3>
+          <div class="muted">Use Up/Down to reorder. Delete removes the row (apps remain).</div>
+          <div class="hr"></div>
+          <div id="listsList">
+            ${listCards || `<div class="muted">No lists. Create one above.</div>`}
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Assign apps to lists</h3>
+          <div class="muted">Pick a list, then add/remove apps.</div>
+          <div class="hr"></div>
+
+          <div class="field">
+            <label>Choose list</label>
+            <select id="assignListSelect">
+              ${state.lists.map(l => `<option value="${escapeAttr(l.id)}">${escapeHtml(l.name)}</option>`).join("")}
+            </select>
+          </div>
+
+          <div class="split">
+            <button class="btn secondary" id="setAssignTargetBtn" type="button">Set as quick-assign target</button>
+            <button class="btn secondary" id="clearAssignTargetBtn2" type="button">Clear target</button>
+          </div>
+
+          <div class="hr"></div>
+          <div id="assignArea"></div>
+        </div>
+      `;
+    }
+
+    function wireListsTab(){
+      const newListName = el("#newListName", drawerBody);
+      const createListBtn = el("#createListBtn", drawerBody);
+      const toggleEditModeBtn = el("#toggleEditModeBtn", drawerBody);
+      const assignListSelect = el("#assignListSelect", drawerBody);
+      const setAssignTargetBtn = el("#setAssignTargetBtn", drawerBody);
+      const clearAssignTargetBtn2 = el("#clearAssignTargetBtn2", drawerBody);
+      const assignArea = el("#assignArea", drawerBody);
+
+      toggleEditModeBtn.addEventListener("click", () => setEditMode(!state.editMode));
+
+      createListBtn.addEventListener("click", () => {
+        const name = (newListName.value || "").trim();
+        if(!name){
+          showToast("List name is required.");
+          newListName.focus();
+          return;
+        }
+        state.lists.push({ id: uid("list"), name, appIds: [] });
+        saveState();
+        renderDrawer();
+        renderHome();
+        showToast(`Created list: "${name}"`);
+      });
+
+      // List cards actions
+      els(".itemCard", drawerBody).filter(c => c.dataset.listId).forEach(card => {
+        card.addEventListener("click", (e) => {
+          const btn = e.target.closest("button");
+          if(!btn) return;
+          const listId = card.dataset.listId;
+          const action = btn.dataset.action;
+
+          const idx = state.lists.findIndex(l => l.id === listId);
+          if(idx < 0) return;
+
+          if(action === "moveUp" && idx > 0){
+            const [l] = state.lists.splice(idx, 1);
+            state.lists.splice(idx - 1, 0, l);
+            saveState();
+            renderDrawer();
+            renderHome();
+          }
+          if(action === "moveDown" && idx < state.lists.length - 1){
+            const [l] = state.lists.splice(idx, 1);
+            state.lists.splice(idx + 1, 0, l);
+            saveState();
+            renderDrawer();
+            renderHome();
+          }
+          if(action === "rename"){
+            promptRenameList(listId);
+          }
+          if(action === "delete"){
+            const l = state.lists[idx];
+            if(!confirm(`Delete list "${l.name}"? Apps will not be deleted.`)) return;
+            state.lists.splice(idx, 1);
+            // Clear quick-assign target if it was this list
+            if(state._ui?.assignTargetListId === listId) delete state._ui.assignTargetListId;
+            saveState();
+            renderDrawer();
+            renderHome();
+            showToast("List deleted.");
+          }
+        });
+      });
+
+      function renderAssignArea(listId){
+        const list = state.lists.find(l => l.id === listId);
+        if(!list){
+          assignArea.innerHTML = `<div class="muted">No list selected.</div>`;
+          return;
+        }
+
+        const apps = Object.values(state.apps).sort((a,b) => a.name.localeCompare(b.name));
+        const inList = new Set(list.appIds);
+
+        assignArea.innerHTML = `
+          <div class="muted" style="margin-bottom:10px">
+            Managing: <b>${escapeHtml(list.name)}</b>
+          </div>
+          ${apps.map(app => {
+            const assigned = inList.has(app.id);
+            return `
+              <div class="itemCard" data-app-id="${escapeAttr(app.id)}">
+                <div class="badge" style="background:${escapeAttr(app.color || colorFromString(app.name))}">
+                  ${app.iconType==="image" && app.iconValue ? `<img alt="" src="${escapeAttr(app.iconValue)}" />` : `<div style="font-weight:800">${escapeHtml((app.iconValue||initials(app.name)).slice(0,3))}</div>`}
+                </div>
+                <div class="meta">
+                  <strong>${escapeHtml(app.name)}</strong>
+                  <span>${escapeHtml(prettyUrl(app.url))}</span>
+                </div>
+                <div class="actions">
+                  ${assigned
+                    ? `<button class="btn danger" data-action="remove" type="button">Remove</button>`
+                    : `<button class="btn ok" data-action="add" type="button">Add</button>`
+                  }
+                </div>
+              </div>
+            `;
+          }).join("")}
+        `;
+
+        els(".itemCard", assignArea).forEach(card => {
+          card.addEventListener("click", (e) => {
+            const btn = e.target.closest("button");
+            if(!btn) return;
+            const appId = card.dataset.appId;
+            const action = btn.dataset.action;
+            if(action === "add"){
+              addAppToList(listId, appId);
+            } else if(action === "remove"){
+              removeAppFromList(listId, appId);
+            }
+            saveState();
+            renderAssignArea(listId);
+            renderHome();
+          });
+        });
+      }
+
+      assignListSelect.addEventListener("change", () => renderAssignArea(assignListSelect.value));
+      renderAssignArea(assignListSelect.value);
+
+      setAssignTargetBtn.addEventListener("click", () => {
+        state._ui = state._ui || {};
+        state._ui.assignTargetListId = assignListSelect.value;
+        saveState();
+        renderDrawer();
+        showToast("Quick-assign target set.");
+      });
+      clearAssignTargetBtn2.addEventListener("click", () => {
+        if(state._ui) delete state._ui.assignTargetListId;
+        saveState();
+        renderDrawer();
+        showToast("Quick-assign cleared.");
+      });
+    }
+
+    function renderBackgroundTab(){
+      const mode = state.background.mode;
+      return `
+        <div class="section">
+          <h3>Background</h3>
+          <div class="muted">Choose a preset, a solid color, an image URL, or upload a background image (saved locally in your browser).</div>
+
+          <div class="hr"></div>
+
+          <div class="field">
+            <label>Mode</label>
+            <select id="bgMode">
+              <option value="preset" ${mode==="preset"?"selected":""}>Preset gradient</option>
+              <option value="color" ${mode==="color"?"selected":""}>Solid color</option>
+              <option value="url" ${mode==="url"?"selected":""}>Image URL</option>
+              <option value="upload" ${mode==="upload"?"selected":""}>Upload image</option>
+            </select>
+          </div>
+
+          <div id="bgModeArea"></div>
+
+          <div class="split" style="margin-top:10px">
+            <button class="btn secondary" id="resetBgBtn" type="button">Reset background</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function wireBackgroundTab(){
+      const bgMode = el("#bgMode", drawerBody);
+      const bgModeArea = el("#bgModeArea", drawerBody);
+      const resetBgBtn = el("#resetBgBtn", drawerBody);
+
+      const renderModeArea = () => {
+        const mode = bgMode.value;
+        if(mode === "preset"){
+          bgModeArea.innerHTML = `
+            <div class="field">
+              <label>Preset</label>
+              <select id="bgPreset">${BG_PRESETS.map(p => `<option value="${escapeAttr(p.name)}" ${(state.background.mode==="preset" && state.background.value===p.name)?"selected":""}>${escapeHtml(p.name)}</option>`).join("")}</select>
+            </div>
+            <div class="muted">Presets are lightweight and “TV friendly”.</div>
+          `;
+          el("#bgPreset", bgModeArea).addEventListener("change", (e) => {
+            state.background = { mode:"preset", value: e.target.value };
+            saveState();
+            applyBackground();
+            showToast("Background updated.");
+          });
+        } else if(mode === "color"){
+          bgModeArea.innerHTML = `
+            <div class="field">
+              <label>Color (hex)</label>
+              <input class="input" id="bgColor" placeholder="#0b0f17" value="${escapeAttr(state.background.mode==="color" ? state.background.value : "#0b0f17")}" />
+            </div>
+            <div class="split">
+              <button class="btn ok" id="applyBgColorBtn" type="button">Apply</button>
+            </div>
+          `;
+          el("#applyBgColorBtn", bgModeArea).addEventListener("click", () => {
+            const v = (el("#bgColor", bgModeArea).value || "").trim();
+            const c = normalizeColor(v);
+            if(!c){
+              showToast("Enter a valid hex color like #112233.");
+              return;
+            }
+            state.background = { mode:"color", value:c };
+            saveState();
+            applyBackground();
+            showToast("Background updated.");
+          });
+        } else if(mode === "url"){
+          bgModeArea.innerHTML = `
+            <div class="field">
+              <label>Image URL</label>
+              <input class="input" id="bgUrl" placeholder="https://..." value="${escapeAttr(state.background.mode==="url" ? state.background.value : "")}" />
+            </div>
+            <div class="split">
+              <button class="btn ok" id="applyBgUrlBtn" type="button">Apply</button>
+            </div>
+            <div class="muted">Tip: Use a high-resolution image (e.g., 1920×1080 or higher).</div>
+          `;
+          el("#applyBgUrlBtn", bgModeArea).addEventListener("click", () => {
+            const v = (el("#bgUrl", bgModeArea).value || "").trim();
+            if(!isProbablyUrl(v)){
+              showToast("Please enter a valid URL (include https://).");
+              return;
+            }
+            state.background = { mode:"url", value:v };
+            saveState();
+            applyBackground();
+            showToast("Background updated.");
+          });
+        } else { // upload
+          bgModeArea.innerHTML = `
+            <div class="field">
+              <label>Upload image</label>
+              <input class="input" id="bgFile" type="file" accept="image/*" />
+            </div>
+            <div class="muted">Stored locally in your browser (no server).</div>
+          `;
+          el("#bgFile", bgModeArea).addEventListener("change", async (e) => {
+            const file = e.target.files?.[0];
+            if(!file) return;
+            const dataUrl = await fileToDataUrl(file);
+            state.background = { mode:"upload", value: dataUrl };
+            saveState();
+            applyBackground();
+            showToast("Background updated.");
+          });
+        }
+      };
+
+      bgMode.addEventListener("change", () => {
+        state.background.mode = bgMode.value;
+        saveState();
+        renderModeArea();
+      });
+
+      resetBgBtn.addEventListener("click", () => {
+        state.background = { mode:"preset", value:"Aurora" };
+        saveState();
+        applyBackground();
+        renderDrawer();
+        showToast("Background reset.");
+      });
+
+      renderModeArea();
+    }
+
+    function renderPreferencesTab(){
+      const on = !!state.preferences?.openLinksInNewTab;
+      return `
+        <div class="section">
+          <h3>Preferences</h3>
+          <div class="muted">Small behavior tweaks.</div>
+          <div class="hr"></div>
+
+          <div class="toggleRow" id="toggleNewTabRow" role="button" tabindex="0" aria-label="Toggle open links in new tab">
+            <div class="left">
+              <strong>Open links in new tab</strong>
+              <span>When enabled, launching an app opens in a new browser tab.</span>
+            </div>
+            <div class="switch ${on ? "on" : ""}" id="openNewTabSwitch" aria-checked="${on ? "true" : "false"}" role="switch"></div>
+          </div>
+
+          <div class="muted" style="margin-top:10px">
+            Tip: For a “TV kiosk” feel, you might prefer turning this off.
+          </div>
+        </div>
+      `;
+    }
+
+    function wirePreferencesTab(){
+      const row = el("#toggleNewTabRow", drawerBody);
+      const sw = el("#openNewTabSwitch", drawerBody);
+
+      const toggle = () => {
+        state.preferences = state.preferences || {};
+        state.preferences.openLinksInNewTab = !state.preferences.openLinksInNewTab;
+        saveState();
+        renderDrawer();
+        showToast(state.preferences.openLinksInNewTab ? "Links will open in a new tab." : "Links will open in the same tab.");
+      };
+
+      row.addEventListener("click", toggle);
+      row.addEventListener("keydown", (e) => {
+        if(e.key === "Enter" || e.key === " "){
+          e.preventDefault();
+          toggle();
+        }
+      });
+      sw.addEventListener("click", (e) => { e.stopPropagation(); toggle(); });
+    }
+
+    function renderImportExportTab(){
+      return `
+        <div class="section">
+          <h3>Export</h3>
+          <div class="muted">Copy your setup to move it to another device/browser.</div>
+          <div class="hr"></div>
+          <div class="field">
+            <label>State JSON</label>
+            <textarea id="exportJson" class="input" readonly>${escapeHtml(JSON.stringify(sanitizeForExport(state), null, 2))}</textarea>
+          </div>
+          <div class="split">
+            <button class="btn secondary" id="copyExportBtn" type="button">Copy</button>
+            <button class="btn secondary" id="downloadExportBtn" type="button">Download .json</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Import</h3>
+          <div class="muted">Paste JSON to replace your current setup.</div>
+          <div class="hr"></div>
+          <div class="field">
+            <label>Paste JSON</label>
+            <textarea id="importJson" class="input" placeholder='{"version":1,...}'></textarea>
+          </div>
+          <div class="split">
+            <button class="btn ok" id="importBtn" type="button">Import</button>
+            <button class="btn danger" id="factoryResetBtn" type="button">Factory reset</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function wireImportExportTab(){
+      const exportJson = el("#exportJson", drawerBody);
+      const importJson = el("#importJson", drawerBody);
+      const copyExportBtn = el("#copyExportBtn", drawerBody);
+      const downloadExportBtn = el("#downloadExportBtn", drawerBody);
+      const importBtn = el("#importBtn", drawerBody);
+      const factoryResetBtn = el("#factoryResetBtn", drawerBody);
+
+      copyExportBtn.addEventListener("click", async () => {
+        try{
+          await navigator.clipboard.writeText(exportJson.value);
+          showToast("Copied.");
+        }catch{
+          showToast("Copy failed (browser blocked). Select and copy manually.");
+        }
+      });
+
+      downloadExportBtn.addEventListener("click", () => {
+        const blob = new Blob([exportJson.value], {type:"application/json"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "tv-home-state.json";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+      });
+
+      importBtn.addEventListener("click", () => {
+        const txt = (importJson.value || "").trim();
+        if(!txt){
+          showToast("Paste JSON first.");
+          return;
+        }
+        const parsed = safeJson(txt);
+        if(!parsed || typeof parsed !== "object"){
+          showToast("Invalid JSON.");
+          return;
+        }
+        const fixed = coerceState(parsed);
+        if(!fixed){
+          showToast("JSON doesn't look like a TV Home state export.");
+          return;
+        }
+        state = fixed;
+        // Ensure preferences exists
+        state.preferences = state.preferences || { openLinksInNewTab: true };
+        if(typeof state.preferences.openLinksInNewTab !== "boolean") state.preferences.openLinksInNewTab = true;
+
+        saveState();
+        applyBackground();
+        setEditMode(!!state.editMode, { silent:true });
+        renderHome();
+        renderDrawer();
+        showToast("Imported successfully.");
+      });
+
+      factoryResetBtn.addEventListener("click", () => {
+        if(!confirm("Factory reset? This clears your current setup.")) return;
+        state = DEFAULT_STATE();
+        saveState();
+        applyBackground();
+        setEditMode(false, { silent:true });
+        renderHome();
+        renderDrawer();
+        showToast("Reset complete.");
+      });
+    }
+
+    function renderAboutTab(){
+      const on = !!state.preferences?.openLinksInNewTab;
+      return `
+        <div class="section">
+          <h3>About</h3>
+          <div class="muted">
+            This is a single-file “Android TV-ish” home screen you can bookmark or set as a start page.
+            <br><br>
+            <b>Controls:</b><br>
+            • Arrow keys to move<br>
+            • Enter/Space to open an app<br>
+            • <b>S</b> opens Settings<br>
+            • <b>E</b> toggles Edit mode (drag tiles and lists)<br>
+            • Esc closes Settings / exits Edit mode
+            <br><br>
+            <b>Current behavior:</b><br>
+            • Open links in new tab: <b>${on ? "On" : "Off"}</b>
+            <br><br>
+            <b>Notes:</b><br>
+            • Everything is stored in <code>localStorage</code> in your browser.<br>
+            • If you use an image URL icon/background, your browser must be able to load it (CORS rules apply).
+          </div>
+        </div>
+      `;
+    }
+
+    /*********************
+     * State mutations
+     *********************/
+    function addAppToList(listId, appId){
+      const list = state.lists.find(l => l.id === listId);
+      if(!list) return;
+      if(!state.apps[appId]) return;
+      if(!list.appIds.includes(appId)) list.appIds.push(appId);
+    }
+
+    function removeAppFromList(listId, appId){
+      const list = state.lists.find(l => l.id === listId);
+      if(!list) return;
+      list.appIds = list.appIds.filter(id => id !== appId);
+      saveState();
+      renderHome();
+      showToast("Removed from list.");
+    }
+
+    function promptRenameList(listId){
+      const list = state.lists.find(l => l.id === listId);
+      if(!list) return;
+      const name = prompt("Rename list:", list.name);
+      if(name === null) return;
+      const trimmed = name.trim();
+      if(!trimmed){
+        showToast("Name cannot be empty.");
+        return;
+      }
+      list.name = trimmed;
+      saveState();
+      renderHome();
+      if(isDrawerOpen()) renderDrawer();
+      showToast("List renamed.");
+    }
+
+    function promptPickList(title, onPick){
+      const names = state.lists.map((l, i) => `${i+1}) ${l.name}`).join("\n");
+      const s = prompt(`${title}\n\n${names}\n\nEnter a number:`, "1");
+      if(s === null) return;
+      const n = Number(s);
+      if(!Number.isFinite(n) || n < 1 || n > state.lists.length){
+        showToast("Invalid choice.");
+        return;
+      }
+      onPick(state.lists[n-1].id);
+    }
+
+    /*********************
+     * Edit mode
+     *********************/
+    function setEditMode(on, opts={}){
+      state.editMode = !!on;
+      if(!opts.silent) saveState();
+      document.body.classList.toggle("editMode", state.editMode);
+      editBtnLabel.textContent = state.editMode ? "Done" : "Edit";
+      editBtn.classList.toggle("ok", state.editMode);
+      editBtn.classList.toggle("secondary", !state.editMode);
+
+      // Re-render to apply draggable/controls/placeholder
+      if(!opts.silent){
+        renderHome();
+        if(isDrawerOpen()) renderDrawer();
+        showToast(state.editMode ? "Edit mode ON: drag tiles & lists." : "Edit mode OFF.");
+      }
+    }
+
+    /*********************
+     * Background
+     *********************/
+    function applyBackground(){
+      const { mode, value } = state.background || { mode:"preset", value:"Aurora" };
+      if(mode === "preset"){
+        const preset = BG_PRESETS.find(p => p.name === value) || BG_PRESETS[0];
+        bgEl.style.background = preset.css;
+        bgEl.style.backgroundSize = "cover";
+        bgEl.style.backgroundPosition = "center";
+      } else if(mode === "color"){
+        const c = normalizeColor(value) || "#0b0f17";
+        bgEl.style.background = c;
+      } else if(mode === "url"){
+        bgEl.style.background = `url("${cssUrlEscape(value)}") center / cover no-repeat, var(--bg)`;
+      } else if(mode === "upload"){
+        bgEl.style.background = `url("${cssUrlEscape(value)}") center / cover no-repeat, var(--bg)`;
+      } else {
+        bgEl.style.background = BG_PRESETS[0].css;
+      }
+    }
+
+    /*********************
+     * Link opening behavior
+     *********************/
+    function openUrl(url){
+      const newTab = !!state.preferences?.openLinksInNewTab;
+      if(newTab){
+        try{
+          window.open(url, "_blank", "noopener,noreferrer");
+        }catch{
+          location.href = url;
+        }
+      } else {
+        location.href = url;
+      }
+    }
+
+    /*********************
+     * Persistence
+     *********************/
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return DEFAULT_STATE();
+        const parsed = JSON.parse(raw);
+        const fixed = coerceState(parsed);
+        return fixed || DEFAULT_STATE();
+      }catch{
+        return DEFAULT_STATE();
+      }
+    }
+
+    function saveState(){
+      try{
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }catch{
+        // If storage is full (large upload), warn and fall back
+        showToast("Warning: Could not save (storage full?). Try a smaller background image.");
+      }
+    }
+
+    function sanitizeForExport(s){
+      // Remove ephemeral UI fields
+      const copy = JSON.parse(JSON.stringify(s));
+      if(copy._ui) delete copy._ui;
+      return copy;
+    }
+
+    function coerceState(obj){
+      if(!obj || typeof obj !== "object") return null;
+
+      const out = {
+        version: 1,
+        preferences: { openLinksInNewTab: true },
+        background: { mode:"preset", value:"Aurora" },
+        editMode: false,
+        apps: {},
+        lists: []
+      };
+
+      // preferences (back/forward compatible)
+      if(obj.preferences && typeof obj.preferences === "object"){
+        out.preferences.openLinksInNewTab = (typeof obj.preferences.openLinksInNewTab === "boolean")
+          ? obj.preferences.openLinksInNewTab
+          : true;
+      }
+
+      // background
+      if(obj.background && typeof obj.background === "object"){
+        const mode = ["preset","color","url","upload"].includes(obj.background.mode) ? obj.background.mode : "preset";
+        const value = typeof obj.background.value === "string" ? obj.background.value : "Aurora";
+        out.background = { mode, value };
+      }
+
+      // editMode
+      out.editMode = !!obj.editMode;
+
+      // apps
+      if(obj.apps && typeof obj.apps === "object"){
+        for(const [k,v] of Object.entries(obj.apps)){
+          if(!v || typeof v !== "object") continue;
+          const id = typeof v.id === "string" ? v.id : k;
+          const name = typeof v.name === "string" ? v.name : id;
+          const url = typeof v.url === "string" ? v.url : "";
+          if(!url) continue;
+          out.apps[id] = {
+            id,
+            name,
+            url,
+            iconType: (v.iconType === "image") ? "image" : "text",
+            iconValue: typeof v.iconValue === "string" ? v.iconValue : initials(name),
+            color: normalizeColor(v.color || "") || ""
+          };
+        }
+      }
+
+      // lists
+      if(Array.isArray(obj.lists)){
+        out.lists = obj.lists
+          .filter(l => l && typeof l === "object")
+          .map(l => ({
+            id: typeof l.id === "string" ? l.id : uid("list"),
+            name: typeof l.name === "string" ? l.name : "List",
+            appIds: Array.isArray(l.appIds) ? l.appIds.filter(id => typeof id === "string") : []
+          }));
+      }
+
+      // If empty, create defaults
+      if(Object.keys(out.apps).length === 0 || out.lists.length === 0){
+        return DEFAULT_STATE();
+      }
+
+      // Remove appIds not in apps
+      for(const l of out.lists){
+        l.appIds = l.appIds.filter(id => !!out.apps[id]);
+      }
+
+      return out;
+    }
+
+    /*********************
+     * Utilities
+     *********************/
+    function uid(prefix="id"){
+      return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+    }
+
+    function prettyUrl(url){
+      try{
+        const u = new URL(url);
+        return u.hostname.replace(/^www\./,"");
+      }catch{
+        return url;
+      }
+    }
+
+    function initials(name){
+      const s = (name || "").trim();
+      if(!s) return "?";
+      // keep + if included (Disney+)
+      if(s.includes("+")) {
+        const noSpace = s.replace(/\s+/g,"");
+        return noSpace.length <= 3 ? noSpace : noSpace.slice(0,3);
+      }
+      const parts = s.split(/\s+/).filter(Boolean);
+      if(parts.length === 1) return parts[0].slice(0,2).toUpperCase();
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+
+    function colorFromString(str){
+      // Deterministic pleasant-ish color
+      let h = 0;
+      for(let i=0;i<str.length;i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+      const hue = h % 360;
+      return `hsl(${hue} 85% 55%)`;
+    }
+
+    function normalizeColor(c){
+      if(typeof c !== "string") return "";
+      const s = c.trim();
+      if(!s) return "";
+      // Accept #RGB or #RRGGBB
+      if(/^#([0-9a-fA-F]{3})$/.test(s)) return s.toLowerCase();
+      if(/^#([0-9a-fA-F]{6})$/.test(s)) return s.toLowerCase();
+      return "";
+    }
+
+    function isProbablyUrl(u){
+      try{
+        const url = new URL(u);
+        return ["http:","https:"].includes(url.protocol);
+      }catch{
+        return false;
+      }
+    }
+
+    function safeJson(txt){
+      try{ return JSON.parse(txt); }catch{ return null; }
+    }
+
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function escapeAttr(s){
+      return escapeHtml(s).replaceAll("`","&#096;");
+    }
+
+    function cssUrlEscape(url){
+      // Basic escaping for embedding user URL inside CSS url("...")
+      return String(url).replaceAll('"','%22').replaceAll("\n","");
+    }
+
+    async function fileToDataUrl(file){
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+    }
+
+    function showToast(msg){
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => toastEl.classList.remove("show"), 2400);
+    }
+  </script>
+</body>
+</html>
