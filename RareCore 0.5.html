@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>RareCore </title>
+  <title>TV Home (Single-File)</title>
   <style>
     :root{
       --bg: #0b0f17;
@@ -18,10 +18,10 @@
       --shadow: 0 14px 40px rgba(0,0,0,.55);
       --shadow2: 0 10px 26px rgba(0,0,0,.38);
       --radius: 18px;
-      --tileRadius: 18px;
-      --tileW: 220px;
-      --tileH: 190px;
-      --gap: 16px;
+      --tileRadius: 16px;
+      --tileW: 240px;
+      --tileH: 136px;
+      --gap: 14px;
       --rowGap: 18px;
       --padX: 54px;
       --padTop: 22px;
@@ -646,13 +646,13 @@
     @media (max-width: 900px){
       :root{
         --padX: 18px;
-        --tileW: 200px;
-        --tileH: 170px;
+        --tileW: 210px;
+        --tileH: 118px;
       }
       .brand{min-width:auto}
       .pill{display:none}
     }
-
+  
     /* --- PATCH: simplified topbar + square-ish tiles + strip scroll buttons --- */
 
     .topbar{justify-content:flex-end;}
@@ -757,19 +757,7 @@
       border-color: rgba(52,199,89,.32);
     }
 
-    /* Tiles: more Android-TV-like (smaller landscape cards; less giant/square) */
-    :root{
-      --tileW: 240px;
-      --tileH: 136px;  /* ~16:9 */
-      --gap: 14px;
-      --tileRadius: 16px;
-    }
-
-    @media (max-width: 900px){
-      :root{
-        --tileW: 210px;
-        --tileH: 118px;
-      }
+    /* Tiles: Android-TV-like sizing is controlled via Preferences */
     }
 
     .tile{
@@ -854,7 +842,9 @@
     const DEFAULT_STATE = () => ({
       version: 1,
       preferences: {
-        openLinksInNewTab: true
+        openLinksInNewTab: true,
+        tileWidth: 240,
+        tileHeight: 136
       },
       background: {
         mode: "preset", // preset | color | url | upload
@@ -899,356 +889,477 @@
     // Clock
     function updateClock(){
       if(!clockEl) return;
-      clockEl.textContent = new Date().toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
+      clockEl.textContent = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
     }
     updateClock();
-    setInterval(updateClock, 15000);
+    setInterval(updateClock, 15_000);
 
-    // State
+    // Small helper for numeric preferences
+    function normalizeInt(val, def, min, max){
+      const n = Number(val);
+      if(!Number.isFinite(n)) return def;
+      const clamped = Math.min(max, Math.max(min, n));
+      return Math.round(clamped);
+    }
     let state = loadState();
-    // Ensure preferences object exists
-    state.preferences = state.preferences || { openLinksInNewTab: true };
+    // Ensure preferences exists (back-compat)
+    state.preferences = state.preferences || { openLinksInNewTab: true, tileWidth: 240, tileHeight: 136 };
     if(typeof state.preferences.openLinksInNewTab !== "boolean") state.preferences.openLinksInNewTab = true;
+    state.preferences.tileWidth = normalizeInt(state.preferences.tileWidth, 240, 160, 420);
+    state.preferences.tileHeight = normalizeInt(state.preferences.tileHeight, 136, 90, 260);
+
+    function applyTilePreferences(){
+      const p = state.preferences || (state.preferences = {});
+      const tw = normalizeInt(p.tileWidth, 240, 160, 420);
+      const th = normalizeInt(p.tileHeight, 136, 90, 260);
+      p.tileWidth = tw;
+      p.tileHeight = th;
+      document.documentElement.style.setProperty("--tileW", tw + "px");
+      document.documentElement.style.setProperty("--tileH", th + "px");
+    }
+
+    applyTilePreferences();
 
     applyBackground();
     setEditMode(!!state.editMode, { silent:true });
     renderHome();
 
-    /*********************
-     * Topbar actions
-     *********************/
-    if(editBtn){
-      editBtn.addEventListener("click", () => setEditMode(!state.editMode));
-    }
+    // Drawer tabs
+    els(".tab").forEach(t => t.addEventListener("click", () => setTab(t.dataset.tab)));
+    els(".tab").forEach(t => t.addEventListener("keydown", (e) => {
+      if(e.key === "Enter" || e.key === " "){ e.preventDefault(); setTab(t.dataset.tab); }
+    }));
 
-    if(settingsBtn){
-      settingsBtn.addEventListener("click", () => openDrawer());
-    }
-
-    drawerOverlay.addEventListener("click", () => closeDrawer());
+    // Top buttons
+    if(settingsBtn) settingsBtn.addEventListener("click", () => openDrawer());
     closeDrawerBtn.addEventListener("click", () => closeDrawer());
-
-    // Tabs click
-    els(".tab").forEach(tab => {
-      tab.addEventListener("click", () => setTab(tab.dataset.tab));
-      tab.addEventListener("keydown", (e) => {
-        if(e.key === "Enter" || e.key === " "){
-          e.preventDefault();
-          setTab(tab.dataset.tab);
-        }
-      });
-    });
-
-    // Keyboard shortcuts
+    drawerOverlay.addEventListener("click", () => closeDrawer());
+    if(editBtn) editBtn.addEventListener("click", () => setEditMode(!state.editMode));
+    // Keyboard shortcuts + navigation
     document.addEventListener("keydown", (e) => {
-      if(e.repeat) return;
+      // If focus is inside an input/textarea/select, only handle Esc globally
+      const tag = (document.activeElement?.tagName || "").toLowerCase();
+      const isTyping = ["input","textarea","select"].includes(tag) || document.activeElement?.isContentEditable;
 
-      // If drawer open
-      if(isDrawerOpen()){
-        if(e.key === "Escape"){
-          e.preventDefault();
-          closeDrawer();
-          return;
-        }
-        // allow normal typing in inputs/textareas
-        const tag = (document.activeElement?.tagName || "").toLowerCase();
-        if(tag === "input" || tag === "textarea" || tag === "select") return;
+      if(e.key === "Escape"){
+        if(isDrawerOpen()) closeDrawer();
+        else if(state.editMode) setEditMode(false);
+        return;
       }
+
+      if(isTyping) return;
 
       if(e.key.toLowerCase() === "s"){
         e.preventDefault();
-        openDrawer(state._ui?.activeTab || "apps");
+        isDrawerOpen() ? closeDrawer() : openDrawer("apps");
+        return;
       }
 
       if(e.key.toLowerCase() === "e"){
         e.preventDefault();
         setEditMode(!state.editMode);
-      }
-
-      if(e.key === "Escape"){
-        if(state.editMode){
-          setEditMode(false);
-        } else if(isDrawerOpen()){
-          closeDrawer();
-        }
-      }
-
-      // Arrow/Enter navigation in main grid
-      const active = document.activeElement;
-      const isTile = active && active.classList?.contains("tile");
-      if(!isTile) return;
-
-      const key = e.key;
-      if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Enter"," "].includes(key)){
-        e.preventDefault();
-      }
-
-      if(key === "Enter" || key === " "){
-        active.click();
         return;
       }
 
-      // Move focus among tiles like a TV row model
-      moveFocus(key, active);
+      // Arrow navigation between tiles
+      const active = document.activeElement;
+      if(active && active.classList.contains("tile")){
+        handleTileNav(e);
+      }
     });
 
     /*********************
      * Rendering
      *********************/
     function renderHome(){
-      content.innerHTML = "";
-
+      // Defensive: remove unknown appIds from lists
       for(const list of state.lists){
-        const rowEl = document.createElement("div");
-        rowEl.className = "row";
-        rowEl.dataset.listId = list.id;
+        list.appIds = list.appIds.filter(id => !!state.apps[id]);
+      }
+      saveState();
+
+      content.innerHTML = "";
+      state.lists.forEach((list, rowIndex) => {
+        const row = document.createElement("section");
+        row.className = "row";
+        row.dataset.listId = list.id;
+        row.dataset.rowIndex = String(rowIndex);
 
         const header = document.createElement("div");
         header.className = "rowHeader";
 
         const title = document.createElement("div");
         title.className = "rowTitle";
-        title.innerHTML = `
-          <span class="dragHandle" title="Drag to reorder list" aria-hidden="${state.editMode ? "false":"true"}">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M8 7h8M8 12h8M8 17h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </span>
-          ${escapeHtml(list.name)}
+
+        const handle = document.createElement("div");
+        handle.className = "dragHandle";
+        handle.title = "Drag to reorder list (Edit mode)";
+        handle.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M9 7h2M13 7h2M9 12h2M13 12h2M9 17h2M13 17h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
         `;
+        title.appendChild(handle);
+
+        const tText = document.createElement("span");
+        tText.textContent = list.name;
+        title.appendChild(tText);
 
         const meta = document.createElement("div");
         meta.className = "rowMeta";
-        meta.textContent = `${list.appIds.length} app${list.appIds.length===1?"":"s"}`;
+        meta.textContent = `${list.appIds.length} app${list.appIds.length === 1 ? "" : "s"}`;
+
+        const actions = document.createElement("div");
+        actions.className = "rowActions";
+        actions.innerHTML = `
+          <button class="btn secondary" type="button" data-action="addAppToList" title="Add app to this list">
+            <span class="ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </span>
+            Add app
+          </button>
+          <button class="btn secondary" type="button" data-action="renameList" title="Rename list">Rename</button>
+        `;
 
         header.appendChild(title);
         header.appendChild(meta);
+        header.appendChild(actions);
 
-        // Actions (only in edit mode)
-        const actions = document.createElement("div");
-        actions.className = "rowActions";
-        actions.innerHTML = state.editMode ? `
-          <button class="btn secondary" data-action="renameList" title="Rename list">
-            <span class="ico" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none"><path d="M12 20h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L8 18l-4 1 1-4 11.5-11.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            Rename
-          </button>
-        ` : "";
-        if(state.editMode) header.appendChild(actions);
-
-        rowEl.appendChild(header);
-
-        // Strip of tiles
         const strip = document.createElement("div");
         strip.className = "strip";
+        strip.className = "strip";const stripWrap = document.createElement("div");
+        strip.className = "strip";stripWrap.className = "stripWrap";
+
+        strip.className = "strip";const scrollLeftBtn = document.createElement("button");
+        strip.className = "strip";scrollLeftBtn.className = "scrollBtn left";
+        strip.className = "strip";scrollLeftBtn.type = "button";
+        strip.className = "strip";scrollLeftBtn.tabIndex = -1;
+        strip.className = "strip";scrollLeftBtn.setAttribute("aria-label", "Scroll left");
+        strip.className = "strip";scrollLeftBtn.textContent = "\u25C0";
+
+        strip.className = "strip";const scrollRightBtn = document.createElement("button");
+        strip.className = "strip";scrollRightBtn.className = "scrollBtn right";
+        strip.className = "strip";scrollRightBtn.type = "button";
+        strip.className = "strip";scrollRightBtn.tabIndex = -1;
+        strip.className = "strip";scrollRightBtn.setAttribute("aria-label", "Scroll right");
+        strip.className = "strip";scrollRightBtn.textContent = "\u25B6";
+
+        strip.className = "strip";stripWrap.appendChild(strip);
+        strip.className = "strip";stripWrap.appendChild(scrollLeftBtn);
+        strip.className = "strip";stripWrap.appendChild(scrollRightBtn);
+
         strip.setAttribute("role","list");
-        strip.dataset.listId = list.id;
+        strip.setAttribute("aria-label", list.name);
 
-        // Render tiles
-        for(const appId of list.appIds){
+        // Row drag-drop (list reorder) - header handle
+        attachListDnD(row, header, handle);
+
+        // Tiles
+        list.appIds.forEach((appId, tileIndex) => {
           const app = state.apps[appId];
-          if(!app) continue;
+          const tile = buildTile(app, { listId: list.id, rowIndex, tileIndex });
+          strip.appendChild(tile);
+        });
 
-          const tile = document.createElement("div");
-          tile.className = "tile";
-          tile.tabIndex = 0;
-          tile.setAttribute("role","listitem");
-          tile.dataset.appId = appId;
-          tile.dataset.listId = list.id;
-
-          // DnD
-          tile.draggable = !!state.editMode;
-
-          const iconBg = app.color || colorFromString(app.name);
-
-          tile.innerHTML = `
-            <div class="tileControls">
-              <div class="miniBtn drag" title="Drag tile" aria-label="Drag tile">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
-              </div>
-              <div class="miniBtn danger" data-action="removeFromList" title="Remove from this list" aria-label="Remove from list">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 6V4h8v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-              </div>
-            </div>
-
+        // Optional "Add tile" placeholder in edit mode (UI convenience)
+        if(state.editMode){
+          const add = document.createElement("div");
+          add.className = "tile";
+          add.tabIndex = 0;
+          add.dataset.placeholder = "add";
+          add.dataset.listId = list.id;
+          add.innerHTML = `
             <div class="inner">
-              <div class="icon" style="background:${escapeAttr(iconBg)}">
-                ${app.iconType === "image" && app.iconValue
-                  ? `<img alt="" src="${escapeAttr(app.iconValue)}" />`
-                  : `<div class="txt">${escapeHtml((app.iconValue || initials(app.name)).slice(0,3))}</div>`
-                }
+              <div class="icon" style="background: rgba(255,255,255,.10);">
+                <div class="txt">+</div>
               </div>
               <div class="label">
-                <div class="name">${escapeHtml(app.name)}</div>
-                <div class="url">${escapeHtml(prettyUrl(app.url))}</div>
+                <div class="name">Add app</div>
+                <div class="url">to ${escapeHtml(list.name)}</div>
               </div>
             </div>
           `;
-
-          // Click behavior
-          tile.addEventListener("click", (e) => {
-            const btn = e.target.closest(".miniBtn");
-            if(btn){
-              const action = btn.dataset.action;
-              if(action === "removeFromList"){
-                removeAppFromList(list.id, appId);
-                return;
-              }
-              // drag handle doesn't need click
-              return;
-            }
-
-            // If edit mode, no navigation, but show toast
-            if(state.editMode){
-              showToast("Edit mode: drag tiles or use remove button.");
-              return;
-            }
-
-            openUrl(app.url);
+          add.addEventListener("click", () => {
+            openDrawer("apps");
+            showToast("Tip: Add or select an app, then assign it to a list.");
           });
+          add.addEventListener("keydown", (e) => {
+            if(e.key === "Enter" || e.key === " "){ e.preventDefault(); add.click(); }
+          });
+          strip.appendChild(add);
+        }
 
-          // DnD tile
-          if(state.editMode){
-            tile.addEventListener("dragstart", (e) => {
-              e.dataTransfer.effectAllowed = "move";
-              e.dataTransfer.setData("text/plain", JSON.stringify({ type:"tile", appId, fromListId: list.id }));
-              tile.classList.add("dropHint");
-            });
-            tile.addEventListener("dragend", () => tile.classList.remove("dropHint"));
+        row.appendChild(header);
+        row.appendChild(stripWrap);
+        attachStripScrollButtons(strip, scrollLeftBtn, scrollRightBtn);
+        content.appendChild(row);
 
-            tile.addEventListener("dragover", (e) => {
-              const data = safeJson(e.dataTransfer.getData("text/plain"));
-              if(!data || data.type !== "tile") return;
-              if(data.fromListId !== list.id) return; // only reorder within list here
-              e.preventDefault();
-              tile.classList.add("dropHint");
-            });
-            tile.addEventListener("dragleave", () => tile.classList.remove("dropHint"));
-
-            tile.addEventListener("drop", (e) => {
-              e.preventDefault();
-              tile.classList.remove("dropHint");
-              const data = safeJson(e.dataTransfer.getData("text/plain"));
-              if(!data || data.type !== "tile") return;
-              if(data.fromListId !== list.id) return;
-
-              const from = data.appId;
-              const to = appId;
-              if(from === to) return;
-
-              const arr = list.appIds;
-              const fromIndex = arr.indexOf(from);
-              const toIndex = arr.indexOf(to);
-              if(fromIndex < 0 || toIndex < 0) return;
-
-              // Move
-              arr.splice(fromIndex, 1);
-              arr.splice(toIndex, 0, from);
-
-              saveState();
-              renderHome();
-              showToast("Reordered.");
-            });
+        // Row action handlers
+        actions.addEventListener("click", (e) => {
+          const btn = e.target.closest("button");
+          if(!btn) return;
+          const act = btn.dataset.action;
+          if(act === "addAppToList"){
+            openDrawer("apps");
+            // remember target list for quick assigning
+            state._ui = state._ui || {};
+            state._ui.assignTargetListId = list.id;
+            saveState();
+            showToast(`Choose an app and click "Add to list" → ${list.name}`);
+            renderDrawer(); // refresh apps tab to reflect target
+          } else if(act === "renameList"){
+            promptRenameList(list.id);
           }
+        });
 
-          strip.appendChild(tile);
+        // Strip DnD for tiles
+        attachTileDnD(strip, list.id);
+      });
+
+      // Ensure there is at least one focusable tile
+      queueMicrotask(() => {
+        const firstTile = el(".tile", content);
+        if(firstTile && document.activeElement === document.body){
+          firstTile.focus();
         }
-
-        // Wrap strip with scroll buttons (if overflow)
-        const stripWrap = document.createElement("div");
-        stripWrap.className = "stripWrap";
-
-        const leftBtn = document.createElement("button");
-        leftBtn.className = "scrollBtn left";
-        leftBtn.type = "button";
-        leftBtn.title = "Scroll left";
-        leftBtn.innerHTML = "◀";
-
-        const rightBtn = document.createElement("button");
-        rightBtn.className = "scrollBtn right";
-        rightBtn.type = "button";
-        rightBtn.title = "Scroll right";
-        rightBtn.innerHTML = "▶";
-
-        stripWrap.appendChild(leftBtn);
-        stripWrap.appendChild(strip);
-        stripWrap.appendChild(rightBtn);
-
-        rowEl.appendChild(stripWrap);
-
-        content.appendChild(rowEl);
-
-        // Attach list DnD via header drag handle
-        attachListDnD(rowEl, title.querySelector(".dragHandle"));
-
-        // Attach scroll button logic (only when not editing)
-        if(!state.editMode){
-          attachStripScrollButtons(strip, leftBtn, rightBtn);
-        }
-      }
-
-      // Focus first tile if none focused
-      if(!document.activeElement || document.activeElement === document.body){
-        el(".tile", content)?.focus();
-      }
+      });
     }
 
-    function moveFocus(key, activeTile){
-      const tiles = els(".tile", content);
-      const idx = tiles.indexOf(activeTile);
-      if(idx < 0) return;
+    function buildTile(app, { listId, rowIndex, tileIndex }){
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.tabIndex = 0;
+      tile.dataset.appId = app.id;
+      tile.dataset.listId = listId;
+      tile.dataset.rowIndex = String(rowIndex);
+      tile.dataset.tileIndex = String(tileIndex);
 
-      const currentListId = activeTile.dataset.listId;
-      const currentRowTiles = tiles.filter(t => t.dataset.listId === currentListId);
-      const rowIndex = currentRowTiles.indexOf(activeTile);
+      // Icon rendering
+      const iconHTML = (() => {
+        if(app.iconType === "image" && app.iconValue){
+          return `<img alt="" src="${escapeAttr(app.iconValue)}" />`;
+        }
+        // Default: text badge (initials)
+        const label = (app.iconValue || initials(app.name)).slice(0,3);
+        return `<div class="txt">${escapeHtml(label)}</div>`;
+      })();
 
-      if(key === "ArrowLeft"){
-        const prev = currentRowTiles[rowIndex - 1];
-        if(prev) prev.focus();
-        return;
+      const iconBg = app.color || colorFromString(app.name);
+      tile.innerHTML = `
+        <div class="tileControls" aria-hidden="${state.editMode ? "false" : "true"}">
+          <div class="miniBtn drag" title="Drag to reorder (Edit mode)" data-action="drag">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M9 7h2M13 7h2M9 12h2M13 12h2M9 17h2M13 17h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="miniBtn" title="Edit app" data-action="edit">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 20h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="miniBtn danger" title="Remove from this list" data-action="removeFromList">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="inner">
+          <div class="icon" style="background:${escapeAttr(iconBg)};">
+            ${iconHTML}
+          </div>
+          <div class="label">
+            <div class="name">${escapeHtml(app.name)}</div>
+            <div class="url">${escapeHtml(prettyUrl(app.url))}</div>
+          </div>
+        </div>
+      `;
+
+      // Click = open app
+      tile.addEventListener("click", (e) => {
+        const ctrl = e.target.closest(".miniBtn");
+        if(ctrl){
+          // Edit controls
+          const action = ctrl.dataset.action;
+          if(action === "removeFromList"){
+            removeAppFromList(listId, app.id);
+          } else if(action === "edit"){
+            openDrawer("apps");
+            state._ui = state._ui || {};
+            state._ui.editAppId = app.id;
+            saveState();
+            renderDrawer();
+            showToast(`Editing "${app.name}"`);
+          }
+          return;
+        }
+        openUrl(app.url);
+      });
+
+      tile.addEventListener("keydown", (e) => {
+        if(e.key === "Enter" || e.key === " "){
+          e.preventDefault();
+          openUrl(app.url);
+        }
+      });
+
+      // Draggable only in edit mode
+      tile.draggable = !!state.editMode;
+
+      return tile;
+    }
+
+    /*********************
+     * Keyboard navigation (Arrow keys)
+     *********************/
+    function handleTileNav(e){
+      const key = e.key;
+      const active = document.activeElement;
+      if(!active || !active.classList.contains("tile")) return;
+
+      const row = active.closest(".row");
+      const strip = el(".strip", row);
+
+      const tilesInRow = els(".tile", strip).filter(t => !t.dataset.placeholder); // exclude placeholder for index mapping
+      const allRows = els(".row", content);
+
+      // Find indices
+      const rowIdx = allRows.findIndex(r => r === row);
+      let idx = tilesInRow.findIndex(t => t === active);
+      if(idx < 0){
+        // Might be the placeholder "Add app"
+        idx = tilesInRow.length - 1;
       }
+
+      // Navigation helpers
+      const focusTile = (rIdx, tIdx) => {
+        const r = allRows[rIdx];
+        if(!r) return;
+        const s = el(".strip", r);
+        const realTiles = els(".tile", s).filter(t => !t.dataset.placeholder);
+        const t = realTiles[Math.max(0, Math.min(tIdx, realTiles.length - 1))] || el(".tile", s);
+        if(t){
+          t.focus({preventScroll:true});
+          t.scrollIntoView({behavior:"smooth", block:"nearest", inline:"center"});
+        }
+      };
+
       if(key === "ArrowRight"){
-        const next = currentRowTiles[rowIndex + 1];
-        if(next) next.focus();
-        return;
-      }
-
-      // For up/down, move to same approx column in previous/next row
-      if(key === "ArrowUp" || key === "ArrowDown"){
-        const rows = els(".row", content);
-        const rowEls = rows.map(r => ({
-          id: r.dataset.listId,
-          tiles: els(".tile", r)
-        }));
-
-        const curRowIdx = rowEls.findIndex(r => r.id === currentListId);
-        if(curRowIdx < 0) return;
-
-        const targetRow = (key === "ArrowUp") ? rowEls[curRowIdx - 1] : rowEls[curRowIdx + 1];
-        if(!targetRow) return;
-
-        // Pick tile in target row by clamping index
-        const targetIdx = Math.min(rowIndex, targetRow.tiles.length - 1);
-        const t = targetRow.tiles[targetIdx];
-        if(t) t.focus();
-        return;
+        e.preventDefault();
+        const next = tilesInRow[idx + 1] || tilesInRow[idx] || active;
+        next.focus({preventScroll:true});
+        next.scrollIntoView({behavior:"smooth", block:"nearest", inline:"center"});
+      } else if(key === "ArrowLeft"){
+        e.preventDefault();
+        const prev = tilesInRow[idx - 1] || tilesInRow[0] || active;
+        prev.focus({preventScroll:true});
+        prev.scrollIntoView({behavior:"smooth", block:"nearest", inline:"center"});
+      } else if(key === "ArrowDown"){
+        e.preventDefault();
+        focusTile(Math.min(rowIdx + 1, allRows.length - 1), idx);
+      } else if(key === "ArrowUp"){
+        e.preventDefault();
+        focusTile(Math.max(rowIdx - 1, 0), idx);
       }
     }
 
     /*********************
-     * Drag/Drop list reordering
+     * Tile Drag & Drop (Edit mode)
      *********************/
-    function attachListDnD(rowEl, handleEl){
-      const listId = rowEl.dataset.listId;
-      if(!handleEl) return;
+    function attachTileDnD(stripEl, listId){
+      // Only active in edit mode
+      const refreshDraggable = () => {
+        els(".tile", stripEl).forEach(t => {
+          if(t.dataset.placeholder) return;
+          t.draggable = !!state.editMode;
+        });
+      };
+      refreshDraggable();
 
-      if(state.editMode){
-        handleEl.setAttribute("draggable","true");
-      } else {
-        handleEl.removeAttribute("draggable");
-      }
-
-      handleEl.addEventListener("dragstart", (e) => {
+      stripEl.addEventListener("dragstart", (e) => {
         if(!state.editMode) return;
+        const tile = e.target.closest(".tile");
+        if(!tile || tile.dataset.placeholder) return;
+        const appId = tile.dataset.appId;
+        const srcListId = tile.dataset.listId;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", JSON.stringify({ type:"tile", appId, srcListId }));
+        tile.classList.add("dropHint");
+      });
+
+      stripEl.addEventListener("dragend", (e) => {
+        const tile = e.target.closest(".tile");
+        if(tile) tile.classList.remove("dropHint");
+        els(".tile", stripEl).forEach(t => t.classList.remove("dropHint"));
+      });
+
+      stripEl.addEventListener("dragover", (e) => {
+        if(!state.editMode) return;
+        const overTile = e.target.closest(".tile");
+        if(overTile && !overTile.dataset.placeholder){
+          e.preventDefault();
+          overTile.classList.add("dropHint");
+        } else {
+          // allow dropping into empty strip area (append)
+          e.preventDefault();
+        }
+      });
+
+      stripEl.addEventListener("dragleave", (e) => {
+        const tile = e.target.closest(".tile");
+        if(tile) tile.classList.remove("dropHint");
+      });
+
+      stripEl.addEventListener("drop", (e) => {
+        if(!state.editMode) return;
+        e.preventDefault();
+        const data = safeJson(e.dataTransfer.getData("text/plain"));
+        if(!data || data.type !== "tile") return;
+
+        const destListId = listId;
+        const overTile = e.target.closest(".tile");
+        const destList = state.lists.find(l => l.id === destListId);
+        const srcList = state.lists.find(l => l.id === data.srcListId);
+        if(!destList || !srcList) return;
+        if(!state.apps[data.appId]) return;
+
+        // Remove from source
+        srcList.appIds = srcList.appIds.filter(id => id !== data.appId);
+
+        // Determine insert position
+        let insertIndex = destList.appIds.length; // append default
+        if(overTile && !overTile.dataset.placeholder && overTile.dataset.appId){
+          const overId = overTile.dataset.appId;
+          insertIndex = destList.appIds.indexOf(overId);
+          if(insertIndex < 0) insertIndex = destList.appIds.length;
+        }
+
+        // Avoid duplicates in same list
+        destList.appIds = destList.appIds.filter(id => id !== data.appId);
+        destList.appIds.splice(insertIndex, 0, data.appId);
+
+        saveState();
+        renderHome();
+        showToast(`Moved "${state.apps[data.appId].name}"`);
+      });
+    }
+
+    /*********************
+     * List Drag & Drop (Edit mode) — reorder rows
+     *********************/
+    function attachListDnD(rowEl, headerEl, handleEl){
+      // We drag the whole row by grabbing the handle
+      handleEl.addEventListener("mousedown", () => {
+        if(!state.editMode) return;
+        rowEl.setAttribute("draggable", "true");
+      });
+      handleEl.addEventListener("mouseup", () => rowEl.removeAttribute("draggable"));
+      handleEl.addEventListener("mouseleave", () => rowEl.removeAttribute("draggable"));
+
+      rowEl.addEventListener("dragstart", (e) => {
+        if(!state.editMode) return;
+        const listId = rowEl.dataset.listId;
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", JSON.stringify({ type:"list", listId }));
         rowEl.classList.add("dropHint");
@@ -1956,10 +2067,12 @@
 
     function renderPreferencesTab(){
       const on = !!state.preferences?.openLinksInNewTab;
+      const tw = normalizeInt(state.preferences?.tileWidth, 240, 160, 420);
+      const th = normalizeInt(state.preferences?.tileHeight, 136, 90, 260);
       return `
         <div class="section">
           <h3>Preferences</h3>
-          <div class="muted">Small behavior tweaks.</div>
+          <div class="muted">Small behavior and layout tweaks.</div>
           <div class="hr"></div>
 
           <div class="toggleRow" id="toggleNewTabRow" role="button" tabindex="0" aria-label="Toggle open links in new tab">
@@ -1970,8 +2083,33 @@
             <div class="switch ${on ? "on" : ""}" id="openNewTabSwitch" aria-checked="${on ? "true" : "false"}" role="switch"></div>
           </div>
 
+          <div class="hr"></div>
+
+          <h3 style="margin:0 0 8px">Tile size</h3>
+          <div class="muted" style="margin:0 0 12px">Adjust card dimensions to match your display and taste.</div>
+
+          <div class="field">
+            <label>Tile width (px)</label>
+            <div style="display:flex; gap:12px; align-items:center">
+              <input id="tileWidthRange" type="range" min="160" max="420" step="2" value="${tw}" style="flex:1" />
+              <input id="tileWidthNumber" class="input" type="number" min="160" max="420" step="2" value="${tw}" style="width:120px" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Tile height (px)</label>
+            <div style="display:flex; gap:12px; align-items:center">
+              <input id="tileHeightRange" type="range" min="90" max="260" step="2" value="${th}" style="flex:1" />
+              <input id="tileHeightNumber" class="input" type="number" min="90" max="260" step="2" value="${th}" style="width:120px" />
+            </div>
+          </div>
+
+          <div class="split" style="margin-top:10px">
+            <button class="btn secondary" id="resetTileSizeBtn" type="button">Reset tile size</button>
+          </div>
+
           <div class="muted" style="margin-top:10px">
-            Tip: For a “TV kiosk” feel, you might prefer turning this off.
+            Tip: For a “TV kiosk” feel, you might prefer turning “Open links in new tab” off.
           </div>
         </div>
       `;
@@ -1997,6 +2135,51 @@
         }
       });
       sw.addEventListener("click", (e) => { e.stopPropagation(); toggle(); });
+
+      const twR = el("#tileWidthRange", drawerBody);
+      const twN = el("#tileWidthNumber", drawerBody);
+      const thR = el("#tileHeightRange", drawerBody);
+      const thN = el("#tileHeightNumber", drawerBody);
+      const resetBtn = el("#resetTileSizeBtn", drawerBody);
+
+      const bindPair = (rangeEl, numEl, key, def, min, max) => {
+        if(!rangeEl || !numEl) return;
+        const apply = (raw) => {
+          state.preferences = state.preferences || {};
+          state.preferences[key] = normalizeInt(raw, def, min, max);
+          // normalize both (in case width/height were missing)
+          state.preferences.tileWidth = normalizeInt(state.preferences.tileWidth, 240, 160, 420);
+          state.preferences.tileHeight = normalizeInt(state.preferences.tileHeight, 136, 90, 260);
+
+          rangeEl.value = String(state.preferences[key]);
+          numEl.value = String(state.preferences[key]);
+
+          applyTilePreferences();
+          saveState();
+        };
+
+        rangeEl.addEventListener("input", () => apply(rangeEl.value));
+        numEl.addEventListener("input", () => apply(numEl.value));
+        numEl.addEventListener("change", () => apply(numEl.value));
+      };
+
+      bindPair(twR, twN, "tileWidth", 240, 160, 420);
+      bindPair(thR, thN, "tileHeight", 136, 90, 260);
+
+      if(resetBtn){
+        resetBtn.addEventListener("click", () => {
+          state.preferences = state.preferences || {};
+          state.preferences.tileWidth = 240;
+          state.preferences.tileHeight = 136;
+          applyTilePreferences();
+          saveState();
+          if(twR) twR.value = "240";
+          if(twN) twN.value = "240";
+          if(thR) thR.value = "136";
+          if(thN) thN.value = "136";
+          showToast("Tile size reset.");
+        });
+      }
     }
 
     function renderImportExportTab(){
@@ -2077,8 +2260,11 @@
         }
         state = fixed;
         // Ensure preferences exists
-        state.preferences = state.preferences || { openLinksInNewTab: true };
+        state.preferences = state.preferences || { openLinksInNewTab: true, tileWidth: 240, tileHeight: 136 };
         if(typeof state.preferences.openLinksInNewTab !== "boolean") state.preferences.openLinksInNewTab = true;
+        state.preferences.tileWidth = normalizeInt(state.preferences.tileWidth, 240, 160, 420);
+        state.preferences.tileHeight = normalizeInt(state.preferences.tileHeight, 136, 90, 260);
+        applyTilePreferences();
 
         saveState();
         applyBackground();
@@ -2091,6 +2277,7 @@
       factoryResetBtn.addEventListener("click", () => {
         if(!confirm("Factory reset? This clears your current setup.")) return;
         state = DEFAULT_STATE();
+        applyTilePreferences();
         saveState();
         applyBackground();
         setEditMode(false, { silent:true });
@@ -2268,7 +2455,7 @@
 
       const out = {
         version: 1,
-        preferences: { openLinksInNewTab: true },
+        preferences: { openLinksInNewTab: true, tileWidth: 240, tileHeight: 136 },
         background: { mode:"preset", value:"Aurora" },
         editMode: false,
         apps: {},
@@ -2280,6 +2467,9 @@
         out.preferences.openLinksInNewTab = (typeof obj.preferences.openLinksInNewTab === "boolean")
           ? obj.preferences.openLinksInNewTab
           : true;
+
+        out.preferences.tileWidth = normalizeInt(obj.preferences.tileWidth, 240, 160, 420);
+        out.preferences.tileHeight = normalizeInt(obj.preferences.tileHeight, 136, 90, 260);
       }
 
       // background
@@ -2428,7 +2618,7 @@
       clearTimeout(showToast._t);
       showToast._t = setTimeout(() => toastEl.classList.remove("show"), 2400);
     }
-
+  
 
     function attachStripScrollButtons(stripEl, leftBtn, rightBtn){
       const step = () => Math.max(180, Math.floor(stripEl.clientWidth * 0.85));
