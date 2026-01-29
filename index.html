@@ -844,7 +844,232 @@
 
     const STORAGE_KEY = "tv_home_state_v1";
 
-    const DEFAULT_STATE = () => ({
+    
+
+    // Bundled import state (from tv-home-state.json)
+    const PREFILL_IMPORT_JSON = `{
+  "version": 1,
+  "preferences": {
+    "openLinksInNewTab": false
+  },
+  "background": {
+    "mode": "url",
+    "value": "https://upload.wikimedia.org/wikipedia/commons/8/8d/20100524_Kardamos_beach_Imbros_G%C3%B6k%C3%A7eada_Turkey.jpg"
+  },
+  "editMode": false,
+  "apps": {
+    "netflix": {
+      "id": "netflix",
+      "name": "Netflix",
+      "url": "https://www.netflix.com",
+      "iconType": "image",
+      "iconValue": "https://upload.wikimedia.org/wikipedia/commons/7/75/Netflix_icon.svg",
+      "color": "#e50914"
+    },
+    "plex": {
+      "id": "plex",
+      "name": "Plex",
+      "url": "https://app.plex.tv",
+      "iconType": "image",
+      "iconValue": "https://upload.wikimedia.org/wikipedia/commons/8/8e/Plex_favicon.png",
+      "color": "#fdbd1a"
+    },
+    "hulu": {
+      "id": "hulu",
+      "name": "Hulu",
+      "url": "https://www.hulu.com",
+      "iconType": "image",
+      "iconValue": "https://play-lh.googleusercontent.com/lH3MWp-oZRi39j_XcWqKOtnv7fyLNmH35agp_pR-TdjQLkuEP77HK5_yI9KwKIKI4U01=w480-h960",
+      "color": "#1ce783"
+    },
+    "disney": {
+      "id": "disney",
+      "name": "Disney+",
+      "url": "https://www.disneyplus.com",
+      "iconType": "image",
+      "iconValue": "https://upload.wikimedia.org/wikipedia/commons/f/fa/Disney_plus_icon.png",
+      "color": "#113ccf"
+    },
+    "app_1683dc77873cd_19bd789b5bb": {
+      "id": "app_1683dc77873cd_19bd789b5bb",
+      "name": "Crunchyroll",
+      "url": "https://www.crunchyroll.com/discover",
+      "iconType": "image",
+      "iconValue": "https://upload.wikimedia.org/wikipedia/commons/9/9a/Crunchyroll_logo_.webp",
+      "color": ""
+    },
+    "app_ab08935b8675b8_19bd79a48e2": {
+      "id": "app_ab08935b8675b8_19bd79a48e2",
+      "name": "YouTube",
+      "url": "https://www.youtube.com/",
+      "iconType": "image",
+      "iconValue": "https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg",
+      "color": ""
+    },
+    "primevideo": {
+      "id": "primevideo",
+      "name": "Prime Video",
+      "url": "https://www.primevideo.com",
+      "iconType": "image",
+      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Amazon%20Prime%20Video%20logo%20%282024%29.svg",
+      "color": "#00a8e1"
+    },
+    "hbomax": {
+      "id": "hbomax",
+      "name": "HBO Max",
+      "url": "https://www.hbomax.com/",
+      "iconType": "image",
+      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/HBO%20Max%20%282025%29.svg",
+      "color": "#000000"
+    },
+    "appletv": {
+      "id": "appletv",
+      "name": "Apple TV+",
+      "url": "https://tv.apple.com",
+      "iconType": "image",
+      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Apple%20TV%20Plus%20Logo.svg",
+      "color": "#000000"
+    },
+    "paramount": {
+      "id": "paramount",
+      "name": "Paramount+",
+      "url": "https://www.paramountplus.com",
+      "iconType": "image",
+      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Paramount%2B%20logo.svg",
+      "color": "#0064ff"
+    },
+    "peacock": {
+      "id": "peacock",
+      "name": "Peacock",
+      "url": "https://www.peacocktv.com",
+      "iconType": "image",
+      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/NBCUniversal%20Peacock%20Logo.svg",
+      "color": "#000000"
+    },
+    "espnplus": {
+      "id": "espnplus",
+      "name": "ESPN+",
+      "url": "https://www.espn.com/watch/espnplus/",
+      "iconType": "image",
+      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/ESPN%20Plus.svg",
+      "color": "#000000"
+    },
+    "youtubetv": {
+      "id": "youtubetv",
+      "name": "YouTube TV",
+      "url": "https://tv.youtube.com",
+      "iconType": "image",
+      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/YouTube%20TV%20logo%202024.svg",
+      "color": "#ff0000"
+    },
+    "sling": {
+      "id": "sling",
+      "name": "Sling TV",
+      "url": "https://www.sling.com",
+      "iconType": "image",
+      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Sling%20TV%20logo.svg",
+      "color": "#00aeef"
+    },
+    "fubo": {
+      "id": "fubo",
+      "name": "Fubo",
+      "url": "https://www.fubo.tv",
+      "iconType": "image",
+      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Fubo%202023.svg",
+      "color": "#e87000"
+    },
+    "plutotv": {
+      "id": "plutotv",
+      "name": "Pluto TV",
+      "url": "https://pluto.tv",
+      "iconType": "image",
+      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Pluto%20TV%20logo%202024.svg",
+      "color": "#000000"
+    },
+    "tubi": {
+      "id": "tubi",
+      "name": "Tubi",
+      "url": "https://tubitv.com",
+      "iconType": "image",
+      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Tubi%20logo%202024.svg",
+      "color": "#6c2bd9"
+    },
+    "rokuchannel": {
+      "id": "rokuchannel",
+      "name": "The Roku Channel",
+      "url": "https://therokuchannel.roku.com",
+      "iconType": "image",
+      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/The%20Roku%20Channel%20Logo.svg",
+      "color": "#662d91"
+    },
+    "freevee": {
+      "id": "freevee",
+      "name": "Freevee (Free with ads)",
+      "url": "https://www.primevideo.com/storefront?contentId=freetv&contentType=home",
+      "iconType": "image",
+      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Freevee%20logo.svg",
+      "color": "#00b14f"
+    },
+    "fandangoathome": {
+      "id": "fandangoathome",
+      "name": "Fandango at Home",
+      "url": "https://athome.fandango.com",
+      "iconType": "image",
+      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Fandango%20at%20Home%20logo%20%28horizontal%29.svg",
+      "color": "#ff6a00"
+    }
+  },
+  "lists": [
+    {
+      "id": "list_edf887dc814d08_19bd77b3806",
+      "name": "Favorites",
+      "appIds": [
+        "netflix",
+        "plex",
+        "hulu",
+        "disney",
+        "app_1683dc77873cd_19bd789b5bb",
+        "app_ab08935b8675b8_19bd79a48e2"
+      ]
+    },
+    {
+      "id": "list_c7c4cf4b51e148_19bd77e3a3e",
+      "name": "Movies",
+      "appIds": [
+        "app_ab08935b8675b8_19bd79a48e2",
+        "app_1683dc77873cd_19bd789b5bb",
+        "hulu"
+      ]
+    },
+    {
+      "id": "list_6a9417ad87a3a8_19bd77b3806",
+      "name": "Streaming",
+      "appIds": [
+        "netflix",
+        "hulu",
+        "disney",
+        "plex",
+        "app_1683dc77873cd_19bd789b5bb",
+        "app_ab08935b8675b8_19bd79a48e2",
+        "primevideo",
+        "hbomax",
+        "appletv",
+        "paramount",
+        "peacock",
+        "espnplus",
+        "youtubetv",
+        "sling",
+        "fubo",
+        "plutotv",
+        "tubi",
+        "rokuchannel",
+        "freevee",
+        "fandangoathome"
+      ]
+    }
+  ]
+}`;
+const DEFAULT_STATE = () => ({
       version: 1,
       preferences: {
         openLinksInNewTab: true,
@@ -2209,228 +2434,7 @@
           <div class="hr"></div>
           <div class="field">
             <label>Paste JSON</label>
-            <textarea id="importJson" class="input" placeholder='{
-  "version": 1,
-  "preferences": {
-    "openLinksInNewTab": false
-  },
-  "background": {
-    "mode": "url",
-    "value": "https://upload.wikimedia.org/wikipedia/commons/8/8d/20100524_Kardamos_beach_Imbros_G%C3%B6k%C3%A7eada_Turkey.jpg"
-  },
-  "editMode": false,
-  "apps": {
-    "netflix": {
-      "id": "netflix",
-      "name": "Netflix",
-      "url": "https://www.netflix.com",
-      "iconType": "image",
-      "iconValue": "https://upload.wikimedia.org/wikipedia/commons/7/75/Netflix_icon.svg",
-      "color": "#e50914"
-    },
-    "plex": {
-      "id": "plex",
-      "name": "Plex",
-      "url": "https://app.plex.tv",
-      "iconType": "image",
-      "iconValue": "https://upload.wikimedia.org/wikipedia/commons/8/8e/Plex_favicon.png",
-      "color": "#fdbd1a"
-    },
-    "hulu": {
-      "id": "hulu",
-      "name": "Hulu",
-      "url": "https://www.hulu.com",
-      "iconType": "image",
-      "iconValue": "https://play-lh.googleusercontent.com/lH3MWp-oZRi39j_XcWqKOtnv7fyLNmH35agp_pR-TdjQLkuEP77HK5_yI9KwKIKI4U01=w480-h960",
-      "color": "#1ce783"
-    },
-    "disney": {
-      "id": "disney",
-      "name": "Disney+",
-      "url": "https://www.disneyplus.com",
-      "iconType": "image",
-      "iconValue": "https://upload.wikimedia.org/wikipedia/commons/f/fa/Disney_plus_icon.png",
-      "color": "#113ccf"
-    },
-    "app_1683dc77873cd_19bd789b5bb": {
-      "id": "app_1683dc77873cd_19bd789b5bb",
-      "name": "Crunchyroll",
-      "url": "https://www.crunchyroll.com/discover",
-      "iconType": "image",
-      "iconValue": "https://upload.wikimedia.org/wikipedia/commons/9/9a/Crunchyroll_logo_.webp",
-      "color": ""
-    },
-    "app_ab08935b8675b8_19bd79a48e2": {
-      "id": "app_ab08935b8675b8_19bd79a48e2",
-      "name": "YouTube",
-      "url": "https://www.youtube.com/",
-      "iconType": "image",
-      "iconValue": "https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg",
-      "color": ""
-    },
-    "primevideo": {
-      "id": "primevideo",
-      "name": "Prime Video",
-      "url": "https://www.primevideo.com",
-      "iconType": "image",
-      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Amazon%20Prime%20Video%20logo%20%282024%29.svg",
-      "color": "#00a8e1"
-    },
-    "hbomax": {
-      "id": "hbomax",
-      "name": "HBO Max",
-      "url": "https://www.hbomax.com/",
-      "iconType": "image",
-      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/HBO%20Max%20%282025%29.svg",
-      "color": "#000000"
-    },
-    "appletv": {
-      "id": "appletv",
-      "name": "Apple TV+",
-      "url": "https://tv.apple.com",
-      "iconType": "image",
-      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Apple%20TV%20Plus%20Logo.svg",
-      "color": "#000000"
-    },
-    "paramount": {
-      "id": "paramount",
-      "name": "Paramount+",
-      "url": "https://www.paramountplus.com",
-      "iconType": "image",
-      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Paramount%2B%20logo.svg",
-      "color": "#0064ff"
-    },
-    "peacock": {
-      "id": "peacock",
-      "name": "Peacock",
-      "url": "https://www.peacocktv.com",
-      "iconType": "image",
-      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/NBCUniversal%20Peacock%20Logo.svg",
-      "color": "#000000"
-    },
-    "espnplus": {
-      "id": "espnplus",
-      "name": "ESPN+",
-      "url": "https://www.espn.com/watch/espnplus/",
-      "iconType": "image",
-      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/ESPN%20Plus.svg",
-      "color": "#000000"
-    },
-    "youtubetv": {
-      "id": "youtubetv",
-      "name": "YouTube TV",
-      "url": "https://tv.youtube.com",
-      "iconType": "image",
-      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/YouTube%20TV%20logo%202024.svg",
-      "color": "#ff0000"
-    },
-    "sling": {
-      "id": "sling",
-      "name": "Sling TV",
-      "url": "https://www.sling.com",
-      "iconType": "image",
-      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Sling%20TV%20logo.svg",
-      "color": "#00aeef"
-    },
-    "fubo": {
-      "id": "fubo",
-      "name": "Fubo",
-      "url": "https://www.fubo.tv",
-      "iconType": "image",
-      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Fubo%202023.svg",
-      "color": "#e87000"
-    },
-    "plutotv": {
-      "id": "plutotv",
-      "name": "Pluto TV",
-      "url": "https://pluto.tv",
-      "iconType": "image",
-      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Pluto%20TV%20logo%202024.svg",
-      "color": "#000000"
-    },
-    "tubi": {
-      "id": "tubi",
-      "name": "Tubi",
-      "url": "https://tubitv.com",
-      "iconType": "image",
-      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Tubi%20logo%202024.svg",
-      "color": "#6c2bd9"
-    },
-    "rokuchannel": {
-      "id": "rokuchannel",
-      "name": "The Roku Channel",
-      "url": "https://therokuchannel.roku.com",
-      "iconType": "image",
-      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/The%20Roku%20Channel%20Logo.svg",
-      "color": "#662d91"
-    },
-    "freevee": {
-      "id": "freevee",
-      "name": "Freevee (Free with ads)",
-      "url": "https://www.primevideo.com/storefront?contentId=freetv&contentType=home",
-      "iconType": "image",
-      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Freevee%20logo.svg",
-      "color": "#00b14f"
-    },
-    "fandangoathome": {
-      "id": "fandangoathome",
-      "name": "Fandango at Home",
-      "url": "https://athome.fandango.com",
-      "iconType": "image",
-      "iconValue": "https://commons.wikimedia.org/wiki/Special:FilePath/Fandango%20at%20Home%20logo%20%28horizontal%29.svg",
-      "color": "#ff6a00"
-    }
-  },
-  "lists": [
-    {
-      "id": "list_edf887dc814d08_19bd77b3806",
-      "name": "Favorites",
-      "appIds": [
-        "netflix",
-        "plex",
-        "hulu",
-        "disney",
-        "app_1683dc77873cd_19bd789b5bb",
-        "app_ab08935b8675b8_19bd79a48e2"
-      ]
-    },
-    {
-      "id": "list_c7c4cf4b51e148_19bd77e3a3e",
-      "name": "Movies",
-      "appIds": [
-        "app_ab08935b8675b8_19bd79a48e2",
-        "app_1683dc77873cd_19bd789b5bb",
-        "hulu"
-      ]
-    },
-    {
-      "id": "list_6a9417ad87a3a8_19bd77b3806",
-      "name": "Streaming",
-      "appIds": [
-        "netflix",
-        "hulu",
-        "disney",
-        "plex",
-        "app_1683dc77873cd_19bd789b5bb",
-        "app_ab08935b8675b8_19bd79a48e2",
-        "primevideo",
-        "hbomax",
-        "appletv",
-        "paramount",
-        "peacock",
-        "espnplus",
-        "youtubetv",
-        "sling",
-        "fubo",
-        "plutotv",
-        "tubi",
-        "rokuchannel",
-        "freevee",
-        "fandangoathome"
-      ]
-    }
-  ]
-}'></textarea>
+            <textarea id="importJson" class="input" placeholder="Paste JSON here (prefilled). Delete it to paste a different export."></textarea>
           </div>
           <div class="split">
             <button class="btn ok" id="importBtn" type="button">Import</button>
@@ -2448,7 +2452,22 @@
       const importBtn = el("#importBtn", drawerBody);
       const factoryResetBtn = el("#factoryResetBtn", drawerBody);
 
-      copyExportBtn.addEventListener("click", async () => {
+      
+
+      // Prefill the Import box with the bundled JSON (and keep drafts across tab switches)
+      state._ui = state._ui || {};
+      if(typeof state._ui.importDraft !== "string" || !state._ui.importDraft.trim()){
+        state._ui.importDraft = PREFILL_IMPORT_JSON;
+      }
+      if(importJson){
+        importJson.value = state._ui.importDraft;
+        importJson.addEventListener("input", () => {
+          state._ui = state._ui || {};
+          state._ui.importDraft = importJson.value;
+          saveState();
+        });
+      }
+copyExportBtn.addEventListener("click", async () => {
         try{
           await navigator.clipboard.writeText(exportJson.value);
           showToast("Copied.");
@@ -2484,8 +2503,12 @@
           showToast("JSON doesn't look like a TV Home state export.");
           return;
         }
+        const prevUi = state._ui;
+
         state = fixed;
-        // Ensure preferences exists
+
+        if(prevUi) state._ui = prevUi;
+// Ensure preferences exists
         state.preferences = state.preferences || { openLinksInNewTab: true, tileWidth: 240, tileHeight: 136 };
         if(typeof state.preferences.openLinksInNewTab !== "boolean") state.preferences.openLinksInNewTab = true;
         state.preferences.tileWidth = normalizeInt(state.preferences.tileWidth, 240, 160, 420);
